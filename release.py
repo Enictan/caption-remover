@@ -28,7 +28,7 @@ import zipfile
 ROOT = os.path.dirname(os.path.abspath(__file__))
 DIST = os.path.join(ROOT, "dist")
 CONF = os.path.join(ROOT, "packaging", "release.json")
-CODE_FILES = ["app.py", "engine.py", "updater.py", "update.json", "requirements.txt", "static/index.html"]
+CODE_FILES = ["app.py", "engine.py", "updater.py", "macapp.py", "update.json", "requirements.txt", "static/index.html"]
 KEEP_OLD = 5  # old versions kept in the updates repo
 
 

@@ -14,7 +14,7 @@ sed -e "s/__VERSION__/$VERSION/" -e "s/__BUILD__/$(date +%Y%m%d%H%M)/" "$ROOT/pa
 cp "$ROOT/packaging/mac/launcher.sh" "$APP/Contents/MacOS/CaptionRemover"
 chmod 755 "$APP/Contents/MacOS/CaptionRemover"
 cp "$ROOT/packaging/icon/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
-cp "$ROOT/app.py" "$ROOT/engine.py" "$ROOT/updater.py" "$ROOT/requirements.txt" "$APP/Contents/Resources/app/"
+cp "$ROOT/app.py" "$ROOT/engine.py" "$ROOT/updater.py" "$ROOT/macapp.py" "$ROOT/requirements.txt" "$APP/Contents/Resources/app/"
 [ -f "$ROOT/update.json" ] && cp "$ROOT/update.json" "$APP/Contents/Resources/app/"
 cp "$ROOT/static/index.html" "$APP/Contents/Resources/app/static/"
 printf 'APPL????' > "$APP/Contents/PkgInfo"

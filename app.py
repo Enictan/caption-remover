@@ -6,6 +6,11 @@ Dev run:  python app.py      (CR_BROWSER=1 to force browser, NO_BROWSER=1 for he
 """
 from __future__ import annotations
 
+if __name__ == "__main__":
+    # macOS: restart from inside a small app bundle so the Dock shows "Caption Remover"
+    import macapp
+    macapp.ensure_bundle()
+
 import io
 import os
 import shutil
@@ -23,7 +28,7 @@ import engine
 import updater
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-VERSION = "1.0.2"
+VERSION = "1.0.3"
 NATIVE = False  # set when running inside the native window
 _home = os.path.expanduser("~")
 _vids = "Movies" if sys.platform == "darwin" else "Videos"
@@ -97,7 +102,7 @@ def scan(vid: str, body: dict):
     info = v["info"]
     sens = float(body.get("sensitivity", 0.5))
     dur = max(info["duration"], 0.1)
-    n = 8
+    n = max(4, min(32, int(body.get("n", 8))))
     hits = []
     for i in range(n):
         t = dur * (i + 0.5) / n
@@ -105,6 +110,23 @@ def scan(vid: str, body: dict):
         for b in engine.detect_text(rgb, sens):
             hits.append({"t": t, "box": b})
     return {"hits": hits}
+
+
+@app.get("/api/thumbs/{vid}")
+def thumbs(vid: str, n: int = 24, h: int = 90):
+    """Filmstrip: n evenly spaced frames tiled into one horizontal JPEG."""
+    import subprocess
+    v = _video(vid)
+    info = v["info"]
+    n = max(4, min(60, n))
+    dur = max(info["duration"], 0.1)
+    cmd = [engine.FFMPEG, "-v", "error", "-i", v["path"],
+           "-vf", f"fps={n}/{dur:.3f},scale=-2:{h},tile={n}x1", "-frames:v", "1",
+           "-f", "image2pipe", "-vcodec", "mjpeg", "-q:v", "4", "-"]
+    out = subprocess.run(cmd, capture_output=True, **engine._NOWIN).stdout
+    if not out:
+        raise HTTPException(500, "Could not make thumbnails")
+    return Response(out, media_type="image/jpeg", headers={"Cache-Control": "max-age=3600"})
 
 
 @app.post("/api/preview/{vid}")
@@ -196,6 +218,7 @@ def open_output(jid: str):
 @app.get("/api/system")
 def system():
     return {"device": engine.device(), "output_dir": WORK, "native": NATIVE, "version": VERSION,
+            "dev": bool(os.environ.get("CR_DEV")),
             "platform": sys.platform, "folder": "Finder" if sys.platform == "darwin" else "Explorer"}
 
 
@@ -316,7 +339,7 @@ def main():
         webview.settings["ALLOW_DOWNLOADS"] = True
     except Exception:
         pass
-    webview.create_window("Caption Remover", url, width=1440, height=900, min_size=(980, 640),
+    webview.create_window("Caption Remover", url, width=1440, height=900, min_size=(1100, 700),
                           background_color="#0e0e10")
     if sys.platform == "darwin":
         _mac_icon()  # must run on the main thread, before the event loop starts
