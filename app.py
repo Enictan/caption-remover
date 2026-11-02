@@ -29,7 +29,7 @@ import updater
 import voice
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-VERSION = "1.2.0"
+VERSION = "1.3.0"
 NATIVE = False  # set when running inside the native window
 _home = os.path.expanduser("~")
 _vids = "Movies" if sys.platform == "darwin" else "Videos"
