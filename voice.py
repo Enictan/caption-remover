@@ -156,8 +156,12 @@ def _sysctl_arm():
 
 
 def _base_python():
+    if IS_WIN:   # the app runs under pythonw.exe; venvs are made with python.exe next to it
+        for d in (os.path.join(APP_SUPPORT, "python"), os.path.dirname(sys.executable)):
+            if os.path.exists(os.path.join(d, "python.exe")):
+                return os.path.join(d, "python.exe")
     cand = os.path.join(APP_SUPPORT, "python", "bin", "python3")
-    if not IS_WIN and os.path.exists(cand):
+    if os.path.exists(cand):
         return cand
     return getattr(sys, "_base_executable", None) or sys.executable
 
@@ -219,7 +223,8 @@ def _setup():
         except Exception:
             git_ok = False
         if not git_ok:
-            raise RuntimeError("Setup needs Apple's developer tools (for git). Open Terminal, run: xcode-select --install, then try again")
+            raise RuntimeError("Setup needs Apple's developer tools (for git). Open Terminal, run: xcode-select --install, then try again"
+                               if IS_MAC else "Setup needs Git. Install it from git-scm.com, then try again")
 
         # 1) source
         if not os.path.exists(os.path.join(SRC, "backend", "requirements.txt")) or \
