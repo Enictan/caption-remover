@@ -186,7 +186,7 @@ ul.pts{margin:4px 0 12px 18px;color:var(--tx2);line-height:1.7}
 <div id="app">
  <header id="tb">
   <div class="brand"><i><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M6 20h7M16 20h2"/></svg></i>Caption Remover</div>
-  <div class="seg wsw" id="wsw"><button data-w="clean">Clean</button><button data-w="voice" class="on">Voice</button></div>
+  <div class="seg wsw" id="wsw"><button data-w="clean">Clean</button><button data-w="music">Music</button><button data-w="voice" class="on">Voice</button></div>
   <div class="grow"></div>
   <div class="seg" id="ws">
    <button data-v="media" class="on" title="Transcribe, caption, translate, dub or fix lines in a video or audio file"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="13" height="14" rx="2"/><path d="M16 10l5-3v10l-5-3"/></svg>Video &amp; audio</button>
@@ -391,6 +391,7 @@ function upload(url,file,onp){ return new Promise((res,rej)=>{ const fd=new Form
 
 /* ================= switch & workspaces ================= */
 $('wsw').querySelector('[data-w=clean]').onclick=()=>{ $('mv').pause(); $('ply').pause(); if(IN_FRAME) parent.postMessage({cr:'clean'},'*'); else location.href='/'; };
+$('wsw').querySelector('[data-w=music]').onclick=()=>{ $('mv').pause(); $('ply').pause(); if(IN_FRAME) parent.postMessage({cr:'music'},'*'); else location.href='/#music'; };
 seg('ws',v=>showWs(v));
 function showWs(v){ V.ws=v; setSeg('ws',v); document.querySelectorAll('.ws').forEach(s=>s.classList.remove('on'));
   $({media:'wsMedia',vo:'wsVO',voices:'wsVoices'}[v]).classList.add('on'); if(v==='media') drawStrip(); if(v==='voices') renderVoices(); }

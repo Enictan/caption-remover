@@ -16,6 +16,7 @@ import os
 import shutil
 import sys
 import threading
+import time
 import uuid
 import webbrowser
 
@@ -29,7 +30,7 @@ import updater
 import voice
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-VERSION = "1.3.0"
+VERSION = "1.4.0"
 NATIVE = False  # set when running inside the native window
 _home = os.path.expanduser("~")
 _vids = "Movies" if sys.platform == "darwin" else "Videos"
@@ -311,6 +312,144 @@ def update_restart():
             raise HTTPException(409, "A voice task is still running. Restart when it's finished.")
     voice.stop()
     threading.Timer(0.4, updater.restart).start()
+    return {"ok": True}
+
+
+# --------------------------------------------------------------------------- music: song matcher
+MUSIC_DIR = os.path.join(JOBS_DIR, "music")
+os.makedirs(MUSIC_DIR, exist_ok=True)
+tracks: dict[str, dict] = {}     # id -> analysis + path + name
+
+
+def _track(tid):
+    t = tracks.get(tid)
+    if not t:
+        raise HTTPException(404, "Song not found. Please add it again.")
+    return t
+
+
+def _public(t):
+    return {k: v for k, v in t.items() if k not in ("path", "beats")}
+
+
+@app.post("/api/music/upload")
+async def music_upload(file: UploadFile = File(...)):
+    import music
+    tid = uuid.uuid4().hex[:10]
+    ext = os.path.splitext(file.filename or "song.mp3")[1] or ".mp3"
+    path = os.path.join(MUSIC_DIR, tid + ext)
+    with open(path, "wb") as f:
+        while chunk := await file.read(8 * 1024 * 1024):
+            f.write(chunk)
+    try:
+        import asyncio
+        a = await asyncio.get_running_loop().run_in_executor(None, music.analyse, path)
+        a["wave"] = await asyncio.get_running_loop().run_in_executor(None, music.waveform, path, 600)
+    except Exception as e:  # noqa
+        os.remove(path)
+        raise HTTPException(400, f"Couldn't read that audio file ({e})")
+    name = os.path.splitext(os.path.basename(file.filename or "Song"))[0]
+    if a.get("title"):
+        name = a["title"] + (f" · {a['artist']}" if a.get("artist") else "")
+    t = dict(a, id=tid, name=name, path=path, detected={"tonic": a["tonic"], "mode": a["mode"]})
+    tracks[tid] = t
+    return _public(t)
+
+
+@app.post("/api/music/key/{tid}")
+def music_set_key(tid: str, body: dict):
+    import music
+    t = _track(tid)
+    tonic, mode = int(body["tonic"]) % 12, body["mode"]
+    t.update(tonic=tonic, mode=mode, key=music.key_name(tonic, mode), camelot=music.camelot(tonic, mode), key_conf=1.0)
+    rt, rm = music._relative(tonic, mode)
+    t["key_alts"] = [{"tonic": rt, "mode": rm, "key": music.key_name(rt, rm) + " (same notes)", "camelot": music.camelot(rt, rm)}]
+    return _public(t)
+
+
+@app.post("/api/music/match")
+def music_match(body: dict):
+    import music
+    main = _track(body["main"])
+    out = []
+    for cid in body.get("cands", []):
+        c = tracks.get(cid)
+        if c:
+            m = music.match(main, c)
+            m["id"] = cid
+            m["result"] = music.shifted_key(c, m["shift"])
+            out.append(m)
+    out.sort(key=lambda m: -m["fit"])
+    return {"matches": out}
+
+
+@app.post("/api/music/preview")
+def music_preview(body: dict):
+    """Render a beat-aligned window of the main song and the candidate (transposed + tempo-matched)."""
+    import music
+    main, cand = _track(body["main"]), _track(body["cand"])
+    length = float(body.get("length", 30))
+    semis = int(body.get("semis", 0))
+    ratio = float(body.get("tempo_ratio", 1.0)) if body.get("match_tempo", True) else 1.0
+    ms = music.nearest_beat(main["beats"], float(body.get("main_start", 0)))
+    ms = min(ms, max(0.0, main["duration"] - length))
+    cs = music.nearest_beat(cand["beats"], float(body.get("cand_start", 0)))
+    cs = min(cs, max(0.0, cand["duration"] - length * ratio))
+    key = f"{main['id']}_{ms:.2f}_{length:.0f}"
+    mpath = os.path.join(MUSIC_DIR, f"pv_main_{key}.wav")
+    if not os.path.exists(mpath):
+        music.render(main["path"], mpath, ms, length)
+    cpath = os.path.join(MUSIC_DIR, f"pv_c_{cand['id']}_{cs:.2f}_{semis}_{ratio:.4f}_{length:.0f}.wav")
+    if not os.path.exists(cpath):
+        music.render(cand["path"], cpath, cs, length, semis, ratio)
+    return {"main_url": "/api/music/file/" + os.path.basename(mpath), "cand_url": "/api/music/file/" + os.path.basename(cpath),
+            "main_start": ms, "cand_start": cs, "length": length,
+            "result": music.shifted_key(cand, semis), "bpm_after": round(cand["bpm"] * ratio, 1)}
+
+
+@app.get("/api/music/file/{name}")
+def music_file(name: str):
+    p = os.path.join(MUSIC_DIR, os.path.basename(name))
+    if not os.path.exists(p):
+        raise HTTPException(404, "Not found")
+    return FileResponse(p, media_type="audio/wav")
+
+
+@app.post("/api/music/export")
+def music_export(body: dict):
+    """Save the whole candidate song transposed (and tempo-matched) as a WAV in the output folder."""
+    import music
+    cand = _track(body["cand"])
+    semis = int(body.get("semis", 0))
+    ratio = float(body.get("tempo_ratio", 1.0)) if body.get("match_tempo", True) else 1.0
+    tag = []
+    if semis:
+        tag.append(f"{semis:+d} st")
+    if abs(ratio - 1) > 1e-4:
+        tag.append(f"{cand['bpm'] * ratio:.1f} BPM")
+    tag.append(music.shifted_key(cand, semis)["key"])
+    safe = "".join(ch for ch in cand["name"] if ch not in '\\/:*?"<>|').strip() or "song"
+    out = os.path.join(out_dir(), f"{safe} ({', '.join(tag)}).wav")
+    music.render(cand["path"], out, 0, None, semis, ratio, fade=False)
+    return {"output": out, "filename": os.path.basename(out)}
+
+
+@app.post("/api/music/reveal")
+def music_reveal(body: dict):
+    p = body.get("path")
+    if p and os.path.exists(p) and os.path.dirname(os.path.abspath(p)) == os.path.abspath(out_dir()):
+        _open(p, reveal=True)
+    return {"ok": True}
+
+
+@app.delete("/api/music/{tid}")
+def music_delete(tid: str):
+    t = tracks.pop(tid, None)
+    if t:
+        try:
+            os.remove(t["path"])
+        except OSError:
+            pass
     return {"ok": True}
 
 
