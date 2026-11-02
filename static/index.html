@@ -806,7 +806,12 @@ document.addEventListener('keydown',e=>{ if((e.metaKey||e.ctrlKey)&&e.key===',')
   else if(e.key==='Escape' && $('prefs').style.display==='flex'){ e.stopImmediatePropagation(); closePrefs(); } },true);
 loadPrefs().then(()=>{ S.mode=PREF.default_mode; setSeg('mode',S.mode); S.fmt=PREF.default_fmt; setSeg('fmt',S.fmt);
   $('modeNote').textContent=S.mode==='fast'?'Quick smudge fill for drafts and checks.':'AI fill that rebuilds texture. Use for delivery.'; updateNotes(); });
-fetch('/api/system').then(r=>r.json()).then(d=>{ $('pVer').textContent='v'+d.version; });
+fetch('/api/system').then(r=>r.json()).then(d=>{ $('pVer').textContent='v'+d.version;
+  if(String(d.platform).startsWith('win')){   // Windows: Ctrl instead of ⌘
+    const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT); let n; while((n=w.nextNode())) if(n.nodeValue.includes('⌘')) n.nodeValue=n.nodeValue.replace(/⌘/g,'Ctrl+');
+    document.querySelectorAll('[title]').forEach(e=>{ if(e.title.includes('⌘')) e.title=e.title.replace(/⌘/g,'Ctrl+'); });
+    $('empty').querySelector('p').textContent='Drop a file anywhere in this window, or browse for one. Everything is processed on this PC.';
+  } });
 renderInspector(); layout(); sizeTL();
 </script>
 </body>

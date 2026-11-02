@@ -6,8 +6,9 @@ Publish a new version of Caption Remover.
 
 What it does:
   1. sets VERSION in app.py and writes update.json (where installed apps look for updates)
-  2. builds  dist/caption-remover-app-<v>.zip   (code-only update, ~25 KB)
-             dist/Caption-Remover-Mac-<v>.zip    (full app, for fresh installs)
+  2. builds  dist/caption-remover-app-<v>.zip   (code-only update, shared by Mac and Windows)
+             dist/Caption-Remover-Mac-<v>.zip    (full Mac app, for fresh installs)
+             dist/Caption-Remover-Windows-<v>.zip (full Windows app, for fresh installs)
              dist/latest.json                    (update feed: version, url, checksum, notes)
   3. saves the code to the private repo   (git commit + tag + push)
   4. copies the update files into the public updates repo and pushes
@@ -87,20 +88,32 @@ def main():
         os.remove(full)
     shutil.copy(os.path.join(ROOT, "README.md"), os.path.join(DIST, "How to install.md"))
     run(["zip", "-r", "-y", "-q", full, "Caption Remover.app", "How to install.md"], cwd=DIST)
-    print(f"Built:\n  {upd}\n  {full}\n  {os.path.join(DIST, 'latest.json')}")
+    # 3) full Windows app for new installs (uses the prebuilt launcher exe; rebuilt if Go is here)
+    win_exe = os.path.join(ROOT, "packaging", "windows", "Caption Remover.exe")
+    if shutil.which("go"):
+        subprocess.run(["bash", "packaging/windows/build_launcher.sh"], cwd=ROOT)
+    win = os.path.join(DIST, f"Caption-Remover-Windows-{ver}.zip")
+    with zipfile.ZipFile(win, "w", zipfile.ZIP_DEFLATED) as z:
+        top = "Caption Remover"
+        z.write(win_exe, f"{top}/Caption Remover.exe")
+        z.write(os.path.join(ROOT, "packaging", "icon", "icon.ico"), f"{top}/AppIcon.ico")
+        z.write(os.path.join(ROOT, "packaging", "windows", "README.txt"), f"{top}/README.txt")
+        for f in CODE_FILES:
+            z.write(os.path.join(ROOT, f), f"{top}/app/{f}")
+    print(f"Built:\n  {upd}\n  {full}\n  {win}\n  {os.path.join(DIST, 'latest.json')}")
 
     if not publish:
         print("--no-publish: skipped saving to GitHub")
         return
 
-    # 3) save code to the private repo
+    # 4) save code to the private repo
     run(["git", "add", "-A"])
     run(["git", "commit", "-m", f"Release v{ver}" + (f": {notes}" if notes else "")], check=False)
     run(["git", "tag", "-f", f"v{ver}"])
     run(["git", "push"])
     run(["git", "push", "-f", "origin", f"v{ver}"], check=False)  # tag; not critical
 
-    # 4) publish to the public updates repo
+    # 5) publish to the public updates repo
     if not os.path.isdir(os.path.join(updates_dir, ".git")):
         run(["git", "clone", f"https://github.com/{owner}/{updates_repo}.git", updates_dir], cwd=os.path.dirname(updates_dir))
     run(["git", "pull", "--ff-only"], cwd=updates_dir, check=False)
@@ -109,11 +122,13 @@ def main():
     shutil.copy(upd, rel)
     shutil.copy(full, rel)
     shutil.copy(full, os.path.join(rel, "Caption-Remover-Mac-latest.zip"))
+    shutil.copy(win, rel)
+    shutil.copy(win, os.path.join(rel, "Caption-Remover-Windows-latest.zip"))
     # prune old versions
     def vkey(n):
         m = re.search(r"(\d+)\.(\d+)\.(\d+)\.zip$", n)
         return tuple(map(int, m.groups())) if m else (0,)
-    for prefix in ("caption-remover-app-", "Caption-Remover-Mac-"):
+    for prefix in ("caption-remover-app-", "Caption-Remover-Mac-", "Caption-Remover-Windows-"):
         olds = sorted([n for n in os.listdir(rel) if n.startswith(prefix) and "latest" not in n], key=vkey)
         for n in olds[:-KEEP_OLD]:
             os.remove(os.path.join(rel, n))

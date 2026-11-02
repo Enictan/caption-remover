@@ -28,14 +28,19 @@ import engine
 import updater
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 NATIVE = False  # set when running inside the native window
 _home = os.path.expanduser("~")
 _vids = "Movies" if sys.platform == "darwin" else "Videos"
 DEFAULT_OUT = os.environ.get("CR_OUTPUT") or os.path.join(_home, _vids, "Caption Remover")
 SUPPORT = os.environ.get("CR_SUPPORT") or os.path.join(_home, ".caption-remover")
 SETTINGS_FILE = os.path.join(SUPPORT, "settings.json")
-LOG_FILE = os.path.join(_home, "Library", "Logs", "Caption Remover.log") if sys.platform == "darwin" else None
+if sys.platform == "darwin":
+    LOG_FILE = os.path.join(_home, "Library", "Logs", "Caption Remover.log")
+elif os.name == "nt":
+    LOG_FILE = os.path.join(SUPPORT, "log.txt")
+else:
+    LOG_FILE = None
 JOBS_DIR = os.path.join(DEFAULT_OUT, ".work")
 os.makedirs(JOBS_DIR, exist_ok=True)
 WINDOW = None   # native window (for folder picker)
@@ -392,6 +397,34 @@ def _mac_icon():
         pass
 
 
+def _win_identity():
+    """Windows: own taskbar group instead of Python's."""
+    try:
+        import ctypes
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("TruStudio.CaptionRemover")
+    except Exception:
+        pass
+
+
+def _win_icon():
+    """Windows: put our icon on the window and its taskbar button."""
+    try:
+        import ctypes
+        ico = os.environ.get("CR_ICON_ICO")
+        if not ico or not os.path.exists(ico):
+            return
+        u = ctypes.windll.user32
+        hwnd = u.FindWindowW(None, "Caption Remover")
+        if not hwnd:
+            return
+        for size, which in ((256, 1), (32, 0)):          # ICON_BIG, ICON_SMALL
+            h = u.LoadImageW(None, ico, 1, size, size, 0x10)  # IMAGE_ICON, LR_LOADFROMFILE
+            if h:
+                u.SendMessageW(hwnd, 0x80, which, h)          # WM_SETICON
+    except Exception:
+        pass
+
+
 def main():
     global NATIVE
     import uvicorn
@@ -411,6 +444,8 @@ def main():
         try:
             if sys.platform == "darwin":
                 _mac_identity()
+            elif os.name == "nt":
+                _win_identity()
             import webview  # pywebview
         except Exception as e:  # noqa
             print("Native window unavailable, using browser:", e)
@@ -437,6 +472,11 @@ def main():
     global WINDOW
     WINDOW = webview.create_window("Caption Remover", url, width=1440, height=900, min_size=(1100, 700),
                           background_color="#0e0e10")
+    if os.name == "nt":
+        try:
+            WINDOW.events.shown += _win_icon
+        except Exception:
+            pass
     if sys.platform == "darwin":
         _mac_icon()  # must run on the main thread, before the event loop starts
     webview.start(debug=bool(os.environ.get("CR_DEV")))  # dev: right-click > Reload / Inspect
