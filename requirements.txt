@@ -1,0 +1,9 @@
+torch>=2.2
+torchvision
+easyocr>=1.7
+opencv-python-headless
+numpy
+fastapi
+uvicorn
+python-multipart
+pywebview>=5.0

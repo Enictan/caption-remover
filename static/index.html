@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Caption Remover · Tru Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0e0e10; --panel:#16161a; --panel2:#1d1d22; --line:#2a2a31; --text:#ececf1; --muted:#8d8d98;
+    --accent:#d4a24c; --accent2:#f0c46c; --danger:#e5484d; --auto:#f5b84a; --zone:#4ea1ff; --ok:#3ecf8e;
+    --r:12px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px/1.45 Inter,system-ui,-apple-system,sans-serif}
+  button{font:inherit;color:inherit;cursor:pointer}
+  header{display:flex;align-items:center;gap:12px;padding:14px 22px;border-bottom:1px solid var(--line)}
+  .brand{font-weight:700;letter-spacing:.2px;font-size:15px}
+  .brand span{color:var(--accent)}
+  .pill{font-size:11px;padding:3px 8px;border-radius:99px;background:var(--panel2);color:var(--muted);border:1px solid var(--line)}
+  .spacer{flex:1}
+  .ghost{background:none;border:1px solid var(--line);padding:7px 12px;border-radius:8px;color:var(--muted)}
+  .ghost:hover{color:var(--text);border-color:#3a3a44}
+
+  /* drop */
+  #drop{margin:48px auto;max-width:720px;border:1.5px dashed #3a3a44;border-radius:18px;padding:70px 30px;text-align:center;transition:.15s;background:var(--panel)}
+  #drop.over{border-color:var(--accent);background:#1b1913}
+  #drop h1{margin:10px 0 6px;font-size:24px;font-weight:600}
+  #drop p{color:var(--muted);margin:0 0 22px}
+  .primary{background:var(--accent);color:#1a1405;border:0;padding:11px 20px;border-radius:10px;font-weight:600}
+  .primary:hover{background:var(--accent2)}
+  .primary:disabled{opacity:.45;cursor:not-allowed}
+  .icon{width:46px;height:46px;border-radius:12px;background:#221d12;display:grid;place-items:center;margin:auto;color:var(--accent)}
+
+  /* workspace */
+  #work{display:none;grid-template-columns:minmax(0,1fr) 340px;gap:18px;padding:18px 22px;height:calc(100% - 60px)}
+  .stage{display:flex;flex-direction:column;gap:10px;min-width:0}
+  .viewer{position:relative;background:#000;border-radius:var(--r);overflow:hidden;flex:1;min-height:300px;display:flex;align-items:center;justify-content:center}
+  .viewer video,.viewer img.frame{max-width:100%;max-height:100%;display:block}
+  #overlay{position:absolute;inset:0;cursor:crosshair}
+  #compare{position:absolute;inset:0;display:none;pointer-events:none}
+  #compare img{position:absolute;object-fit:contain;width:100%;height:100%}
+  .badge{position:absolute;top:10px;left:10px;font-size:11px;background:rgba(0,0,0,.6);padding:4px 8px;border-radius:6px;pointer-events:none}
+  #compareBadge{display:none}
+  .transport{display:flex;align-items:center;gap:10px;background:var(--panel);border-radius:var(--r);padding:10px 12px}
+  .transport input[type=range]{flex:1}
+  .tc{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px;min-width:92px;text-align:right}
+  .tbtn{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+  .tbtn.on{border-color:var(--accent);color:var(--accent)}
+  .tools{display:flex;gap:8px;flex-wrap:wrap}
+  .hint{color:var(--muted);font-size:12px}
+
+  aside{background:var(--panel);border-radius:var(--r);padding:16px;overflow:auto;display:flex;flex-direction:column;gap:16px}
+  .sec h3{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);font-weight:600}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:6px 0}
+  .seg{display:flex;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:3px}
+  .seg button{flex:1;background:none;border:0;padding:7px 10px;border-radius:7px;color:var(--muted)}
+  .seg button.on{background:#2b2a30;color:var(--text)}
+  .sub{font-size:12px;color:var(--muted)}
+  input[type=range]{accent-color:var(--accent)}
+  .switch{position:relative;width:36px;height:20px;flex:none}
+  .switch input{opacity:0;width:0;height:0}
+  .switch span{position:absolute;inset:0;background:#33333b;border-radius:99px;transition:.15s}
+  .switch span:before{content:"";position:absolute;width:16px;height:16px;left:2px;top:2px;background:#fff;border-radius:50%;transition:.15s}
+  .switch input:checked+span{background:var(--accent)}
+  .switch input:checked+span:before{transform:translateX(16px)}
+  .regions{display:flex;flex-direction:column;gap:6px}
+  .reg{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:12px}
+  .reg.sel{border-color:var(--danger)}
+  .reg .top{display:flex;justify-content:space-between;align-items:center}
+  .reg .acts{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+  .mini{background:none;border:1px solid var(--line);border-radius:6px;padding:3px 7px;font-size:11px;color:var(--muted)}
+  .mini:hover{color:var(--text)}
+  .x{background:none;border:0;color:var(--muted);font-size:16px;line-height:1}
+  .x:hover{color:var(--danger)}
+  .empty{color:var(--muted);font-size:12px;padding:6px 0}
+  .legend{display:flex;gap:12px;font-size:11px;color:var(--muted)}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+
+  .go{margin-top:auto;display:flex;flex-direction:column;gap:8px}
+  .progress{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px;display:none}
+  .bar{height:6px;background:#2c2c33;border-radius:99px;overflow:hidden;margin:8px 0}
+  .bar div{height:100%;width:0;background:var(--accent);transition:width .3s}
+  .done{border-color:#24533f}
+  .err{color:var(--danger);font-size:12px}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#26262d;border:1px solid var(--line);padding:9px 14px;border-radius:9px;font-size:13px;opacity:0;transition:.2s;pointer-events:none}
+  .toast.show{opacity:1}
+  .upd{position:fixed;top:72px;right:22px;width:340px;z-index:20;background:#1c1912;border:1px solid #5a4620;border-radius:12px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.45);display:none}
+  .upd b{color:var(--accent2)}
+  .upd .notes{color:var(--muted);font-size:12px;margin:6px 0 10px;white-space:pre-line;max-height:120px;overflow:auto}
+  .upd .acts{display:flex;gap:8px;align-items:center}
+  #ver{cursor:pointer}
+  @media (max-width:900px){#work{grid-template-columns:1fr;height:auto}.viewer{min-height:240px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">Caption Remover <span>·</span> Tru Studio</div>
+  <div class="pill" id="dev">loading…</div>
+  <div class="pill" id="ver" style="opacity:.6" title="Check for updates"></div>
+  <div class="spacer"></div>
+  <button class="ghost" id="newBtn" style="display:none">New video</button>
+</header>
+
+<section id="drop">
+  <div class="icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4M6 10l6-6 6 6"/><path d="M4 20h16"/></svg></div>
+  <h1>Drop a video here</h1>
+  <p>MP4, MOV, ProRes, anything ffmpeg can read. It stays on this Mac.</p>
+  <button class="primary" id="pick">Choose video</button>
+  <input type="file" id="file" accept="video/*,.mov,.mxf,.mkv" hidden>
+  <div id="upmsg" class="hint" style="margin-top:14px"></div>
+</section>
+
+<section id="work">
+  <div class="stage">
+    <div class="tools">
+      <button class="tbtn on" id="toolBox" title="Drag on the video to cover a logo, lower third or any graphic">▭ Remove area</button>
+      <button class="tbtn" id="toolZone" title="Only auto-remove text inside this zone">◌ Text zone</button>
+      <button class="tbtn" id="detectBtn">Detect text on this frame</button>
+      <button class="tbtn" id="previewBtn">Preview result</button>
+      <div class="spacer"></div>
+      <div class="legend"><span><i style="background:var(--auto)"></i>auto text</span><span><i style="background:var(--danger)"></i>remove area</span><span><i style="background:var(--zone)"></i>text zone</span></div>
+    </div>
+    <div class="viewer" id="viewer">
+      <video id="vid" preload="auto" muted playsinline></video>
+      <img class="frame" id="fimg" style="display:none" alt="">
+      <div id="compare"><img id="cmpImg" alt=""></div>
+      <canvas id="overlay"></canvas>
+      <div class="badge" id="compareBadge">AFTER · click Preview again to hide</div>
+    </div>
+    <div class="transport">
+      <button class="tbtn" id="play">▶</button>
+      <button class="tbtn" id="back" title="Back 1 frame">‹</button>
+      <button class="tbtn" id="fwd" title="Forward 1 frame">›</button>
+      <input type="range" id="seek" min="0" max="1000" value="0" step="1">
+      <div class="tc" id="tc">0:00.00 / 0:00.00</div>
+    </div>
+    <div class="hint" id="hint">Drag on the video to mark anything to remove. Text is found automatically across the whole clip.</div>
+  </div>
+
+  <aside>
+    <div class="sec">
+      <h3>Auto text removal</h3>
+      <div class="row"><div>Find & remove text<div class="sub">Subtitles, animated captions, titles</div></div>
+        <label class="switch"><input type="checkbox" id="auto" checked><span></span></label></div>
+      <div class="row"><span class="sub">Sensitivity</span><input type="range" id="sens" min="0" max="1" step="0.05" value="0.5" style="width:150px"></div>
+      <div class="row"><span class="sub" id="zoneLbl">Search the whole frame</span><button class="mini" id="clearZone" style="display:none">Clear zone</button></div>
+    </div>
+
+    <div class="sec">
+      <h3>Areas to remove <span id="regCount"></span></h3>
+      <div class="regions" id="regions"><div class="empty">None yet. Drag on the video to cover logos, lower thirds, stickers or any graphic.</div></div>
+    </div>
+
+    <div class="sec">
+      <h3>Quality</h3>
+      <div class="seg" id="mode"><button data-v="fast">Fast</button><button data-v="quality" class="on">Quality</button></div>
+      <div class="sub" id="modeSub" style="margin-top:6px">AI fill (LaMa). Rebuilds texture. Use for final delivery.</div>
+      <div class="row"><span class="sub">Edge padding</span><input type="range" id="pad" min="0" max="24" step="1" value="6" style="width:150px"></div>
+      <div class="row"><div>Steady fill<div class="sub">Stops patches flickering on still shots</div></div>
+        <label class="switch"><input type="checkbox" id="stab" checked><span></span></label></div>
+    </div>
+
+    <div class="sec">
+      <h3>Export</h3>
+      <div class="seg" id="fmt"><button data-v="mp4" class="on">MP4 (H.264)</button><button data-v="prores">ProRes 422 HQ</button></div>
+      <div class="row"><span class="sub" id="trimLbl">Whole clip</span>
+        <span style="display:flex;gap:6px"><button class="mini" id="inBtn">Set in</button><button class="mini" id="outBtn">Set out</button><button class="mini" id="clrTrim">Clear</button></span></div>
+    </div>
+
+    <div class="go">
+      <div class="progress" id="prog">
+        <div class="row" style="margin:0"><strong id="pStage">Starting…</strong><span class="sub" id="pEta"></span></div>
+        <div class="bar"><div id="pBar"></div></div>
+        <div class="row" style="margin:0"><span class="sub" id="pPct">0%</span><button class="mini" id="cancel">Cancel</button></div>
+        <div class="err" id="pErr"></div>
+        <div id="pDone" style="display:none;margin-top:8px;gap:8px">
+          <a class="primary" id="dl" style="text-decoration:none;display:inline-block">Download</a>
+          <button class="primary" id="openOut" style="display:none">Play result</button>
+          <button class="ghost" id="reveal">Show in Finder</button>
+        </div>
+      </div>
+      <button class="primary" id="run">Remove captions</button>
+    </div>
+  </aside>
+</section>
+<div class="toast" id="toast"></div>
+<div class="upd" id="upd">
+  <div><b id="updTitle">Update available</b></div>
+  <div class="notes" id="updNotes"></div>
+  <div class="bar" id="updBarWrap" style="display:none"><div id="updBar"></div></div>
+  <div class="err" id="updErr"></div>
+  <div class="acts"><button class="primary" id="updGo">Update now</button><button class="ghost" id="updLater">Later</button></div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const S = {vid:null, info:null, regions:[], zone:null, auto:[], scan:[], tool:'box', mode:'quality', fmt:'mp4',
+           start:null, end:null, sel:-1, drag:null, job:null, comparing:false, useImg:false, t:0};
+
+/* ---------- utils ---------- */
+const fmtT = t => { if(t==null||isNaN(t)) return '–'; const m=Math.floor(t/60), s=(t%60); return `${m}:${s.toFixed(2).padStart(5,'0')}`; };
+function toast(msg){ const el=$('toast'); el.textContent=msg; el.classList.add('show'); clearTimeout(el._t); el._t=setTimeout(()=>el.classList.remove('show'),2600); }
+async function api(path, body){
+  const r = await fetch(path, body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  if(!r.ok){ let m=r.statusText; try{ m=(await r.json()).detail||m }catch(e){} throw new Error(m); }
+  return r;
+}
+const SYS={native:false,folder:'Finder',output_dir:''};
+fetch('/api/system').then(r=>r.json()).then(d=>{ Object.assign(SYS,d);
+  $('dev').textContent = {mps:'Apple GPU', cuda:'NVIDIA GPU', cpu:'CPU'}[d.device]||d.device; $('dev').title='Saves to '+d.output_dir;
+  $('reveal').textContent='Show in '+d.folder;
+  if(d.native){ $('dl').style.display='none'; $('openOut').style.display=''; }
+  $('ver').textContent='v'+d.version; });
+
+/* ---------- load ---------- */
+const drop=$('drop');
+$('pick').onclick=()=>$('file').click();
+$('file').onchange=e=>e.target.files[0]&&load(e.target.files[0]);
+['dragenter','dragover'].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over')}));
+['dragleave','drop'].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();if(ev==='drop'||e.target===drop)drop.classList.remove('over')}));
+document.addEventListener('drop',e=>{ const f=e.dataTransfer.files[0]; if(f && !S.job) load(f); });
+
+function load(file){
+  $('upmsg').textContent='Loading '+file.name+'…';
+  const fd=new FormData(); fd.append('file',file);
+  const x=new XMLHttpRequest(); x.open('POST','/api/upload');
+  x.upload.onprogress=e=>{ if(e.lengthComputable) $('upmsg').textContent=`Loading ${file.name}… ${Math.round(100*e.loaded/e.total)}%`; };
+  x.onload=()=>{
+    if(x.status!==200){ let m='Upload failed'; try{m=JSON.parse(x.responseText).detail}catch(e){} $('upmsg').textContent=m; return; }
+    const d=JSON.parse(x.responseText); Object.assign(S,{vid:d.id,info:d.info,regions:[],zone:null,auto:[],scan:[],start:null,end:null,sel:-1,useImg:false});
+    drop.style.display='none'; $('work').style.display='grid'; $('newBtn').style.display='';
+    const v=$('vid'); v.src='/api/video/'+d.id; v.style.display=''; $('fimg').style.display='none';
+    v.onerror=()=>{ S.useImg=true; v.style.display='none'; $('fimg').style.display=''; showFrame(); };
+    v.onloadedmetadata=()=>{ v.currentTime=Math.min(0.5,d.info.duration/2); };
+    setTimeout(()=>{ if(!v.videoWidth){ S.useImg=true; v.style.display='none'; $('fimg').style.display=''; showFrame(); } }, 2500);
+    renderRegions(); updateLabels(); scan();
+    $('hint').textContent=`${d.info.width}×${d.info.height} · ${d.info.fps.toFixed(2)} fps · ${fmtT(d.info.duration)}. Scanning for text…`;
+  };
+  x.onerror=()=>$('upmsg').textContent='Upload failed';
+  x.send(fd);
+}
+$('newBtn').onclick=()=>{ if(S.job && ['running','queued'].includes(S.jobState)) return toast('Still processing'); location.reload(); };
+
+async function scan(){
+  try{
+    const d=await (await api('/api/scan/'+S.vid,{sensitivity:+$('sens').value})).json();
+    S.scan=d.hits; draw();
+    const n=d.hits.length;
+    $('hint').textContent = n ? `Found text in ${new Set(d.hits.map(h=>h.t)).size} of 8 sample frames. Faint boxes show where. Add areas for any graphics.` :
+      'No text found in sample frames. Raise sensitivity, or drag boxes over what you want removed.';
+  }catch(e){ $('hint').textContent='Scan failed: '+e.message; }
+}
+
+/* ---------- transport ---------- */
+const V=$('vid');
+function curT(){ return S.useImg ? S.t : V.currentTime; }
+function dur(){ return S.info ? S.info.duration : 0; }
+function setT(t){ t=Math.max(0,Math.min(dur()-0.001,t)); hideCompare(); S.auto=[];
+  if(S.useImg){ S.t=t; showFrame(); } else V.currentTime=t; syncUI(); }
+function showFrame(){ $('fimg').src=`/api/frame/${S.vid}?t=${S.t.toFixed(3)}`; $('fimg').onload=()=>{sizeOverlay();draw()}; syncUI(); }
+function syncUI(){ const t=curT(); $('seek').value=dur()?Math.round(1000*t/dur()):0; $('tc').textContent=`${fmtT(t)} / ${fmtT(dur())}`; draw(); }
+V.ontimeupdate=syncUI; V.onseeked=()=>{sizeOverlay();syncUI()}; V.onloadeddata=()=>{sizeOverlay();draw()};
+$('seek').oninput=e=>setT(dur()*e.target.value/1000);
+$('play').onclick=()=>{ if(S.useImg) return toast('Playback not supported for this format. Use the slider.'); hideCompare(); if(V.paused){V.play();$('play').textContent='❚❚'} else {V.pause();$('play').textContent='▶'} };
+V.onended=()=>$('play').textContent='▶';
+const fstep=()=>1/(S.info?.fps||30);
+$('back').onclick=()=>setT(curT()-fstep()); $('fwd').onclick=()=>setT(curT()+fstep());
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT'&&e.target.type!=='range') return;
+  if(e.key==='ArrowLeft'){e.preventDefault();setT(curT()-fstep()*(e.shiftKey?10:1))}
+  if(e.key==='ArrowRight'){e.preventDefault();setT(curT()+fstep()*(e.shiftKey?10:1))}
+  if(e.key===' '&&S.vid){e.preventDefault();$('play').click()}
+  if((e.key==='Backspace'||e.key==='Delete')&&S.sel>=0){ S.regions.splice(S.sel,1); S.sel=-1; renderRegions(); draw(); }
+});
+
+/* ---------- overlay ---------- */
+const C=$('overlay'), X=C.getContext('2d');
+function media(){ return S.useImg?$('fimg'):V; }
+function contentRect(){ // where the picture actually is inside the viewer, in canvas px
+  const m=media(), vr=$('viewer').getBoundingClientRect(), mr=m.getBoundingClientRect();
+  const iw=S.info?.width||16, ih=S.info?.height||9, s=Math.min(mr.width/iw, mr.height/ih);
+  const w=iw*s, h=ih*s; return {x:mr.left-vr.left+(mr.width-w)/2, y:mr.top-vr.top+(mr.height-h)/2, w, h};
+}
+function sizeOverlay(){ const r=$('viewer').getBoundingClientRect(), d=devicePixelRatio||1; C.width=r.width*d; C.height=r.height*d; C.style.width=r.width+'px'; C.style.height=r.height+'px'; X.setTransform(d,0,0,d,0,0);
+  const cr=contentRect(), ci=$('cmpImg'); Object.assign(ci.style,{left:cr.x+'px',top:cr.y+'px',width:cr.w+'px',height:cr.h+'px'}); draw(); }
+new ResizeObserver(sizeOverlay).observe($('viewer'));
+function toPx(b,r){ return [r.x+b[0]*r.w, r.y+b[1]*r.h, (b[2]-b[0])*r.w, (b[3]-b[1])*r.h]; }
+function draw(){
+  if(!S.info) return; const r=contentRect(); X.clearRect(0,0,C.width,C.height);
+  if(S.comparing) return;
+  const t=curT();
+  X.lineWidth=1;
+  if($('auto').checked){
+    X.fillStyle='rgba(245,184,74,.10)'; X.strokeStyle='rgba(245,184,74,.25)';
+    S.scan.forEach(h=>{ const p=toPx(h.box,r); X.fillRect(...p); });
+    X.setLineDash([5,4]); X.strokeStyle='#f5b84a'; X.lineWidth=1.5;
+    S.auto.forEach(b=>X.strokeRect(...toPx(b,r))); X.setLineDash([]);
+  }
+  if(S.zone){ X.setLineDash([8,5]); X.strokeStyle='#4ea1ff'; X.lineWidth=2; X.strokeRect(...toPx(S.zone,r)); X.setLineDash([]); }
+  S.regions.forEach((g,i)=>{
+    const active=(g.start==null||t>=g.start-1e-3)&&(g.end==null||t<=g.end+1e-3);
+    const p=toPx(g.box,r);
+    X.fillStyle=active?'rgba(229,72,77,.22)':'rgba(229,72,77,.06)'; X.fillRect(...p);
+    X.strokeStyle=active?'#e5484d':'rgba(229,72,77,.4)'; X.lineWidth=i===S.sel?2.5:1.5; X.strokeRect(...p);
+    X.fillStyle='#e5484d'; X.font='600 11px Inter'; X.fillText(String(i+1),p[0]+4,p[1]+13);
+  });
+  if(S.drag && S.drag.kind==='new'){ const d=S.drag; X.strokeStyle=S.tool==='zone'?'#4ea1ff':'#e5484d'; X.lineWidth=1.5; X.setLineDash([4,3]);
+    X.strokeRect(Math.min(d.x0,d.x1),Math.min(d.y0,d.y1),Math.abs(d.x1-d.x0),Math.abs(d.y1-d.y0)); X.setLineDash([]); }
+}
+function norm(x,y){ const r=contentRect(); return [Math.max(0,Math.min(1,(x-r.x)/r.w)), Math.max(0,Math.min(1,(y-r.y)/r.h))]; }
+function hit(x,y){ const r=contentRect(); for(let i=S.regions.length-1;i>=0;i--){ const p=toPx(S.regions[i].box,r); if(x>=p[0]&&x<=p[0]+p[2]&&y>=p[1]&&y<=p[1]+p[3]) return i; } return -1; }
+C.onpointerdown=e=>{
+  if(!S.vid) return; hideCompare(); const b=C.getBoundingClientRect(), x=e.clientX-b.left, y=e.clientY-b.top;
+  const h = S.tool==='box' ? hit(x,y) : -1;
+  if(h>=0){ S.sel=h; S.drag={kind:'move',i:h,x0:x,y0:y,orig:[...S.regions[h].box]}; renderRegions(); }
+  else S.drag={kind:'new',x0:x,y0:y,x1:x,y1:y};
+  C.setPointerCapture(e.pointerId); draw();
+};
+C.onpointermove=e=>{
+  const b=C.getBoundingClientRect(), x=e.clientX-b.left, y=e.clientY-b.top; const d=S.drag;
+  if(!d){ C.style.cursor = (S.tool==='box'&&hit(x,y)>=0)?'move':'crosshair'; return; }
+  if(d.kind==='new'){ d.x1=x; d.y1=y; }
+  else { const r=contentRect(), dx=(x-d.x0)/r.w, dy=(y-d.y0)/r.h, o=d.orig, w=o[2]-o[0], h=o[3]-o[1];
+    const nx=Math.max(0,Math.min(1-w,o[0]+dx)), ny=Math.max(0,Math.min(1-h,o[1]+dy)); S.regions[d.i].box=[nx,ny,nx+w,ny+h]; }
+  draw();
+};
+C.onpointerup=e=>{
+  const d=S.drag; S.drag=null; if(!d) return;
+  if(d.kind==='new'){
+    const [a,b]=norm(Math.min(d.x0,d.x1),Math.min(d.y0,d.y1)), [c,f]=norm(Math.max(d.x0,d.x1),Math.max(d.y0,d.y1));
+    if(c-a>0.005 && f-b>0.005){
+      if(S.tool==='zone'){ S.zone=[a,b,c,f]; setTool('box'); toast('Text zone set. Auto removal only looks inside it.'); }
+      else { S.regions.push({box:[a,b,c,f],start:null,end:null}); S.sel=S.regions.length-1; }
+    } else S.sel=-1;
+  }
+  renderRegions(); updateLabels(); draw();
+};
+
+/* ---------- regions list ---------- */
+function renderRegions(){
+  const el=$('regions'); $('regCount').textContent=S.regions.length?`(${S.regions.length})`:'';
+  if(!S.regions.length){ el.innerHTML='<div class="empty">None yet. Drag on the video to cover logos, lower thirds, stickers or any graphic.</div>'; return; }
+  el.innerHTML='';
+  S.regions.forEach((g,i)=>{
+    const d=document.createElement('div'); d.className='reg'+(i===S.sel?' sel':'');
+    const range = (g.start==null&&g.end==null)?'Whole video':`${fmtT(g.start??0)} → ${g.end==null?'end':fmtT(g.end)}`;
+    d.innerHTML=`<div class="top"><span><b>Area ${i+1}</b> · <span class="sub">${range}</span></span><button class="x" title="Delete">×</button></div>
+      <div class="acts"><button class="mini" data-a="s">Starts here</button><button class="mini" data-a="e">Ends here</button><button class="mini" data-a="c">Whole video</button><button class="mini" data-a="j">Jump</button></div>`;
+    d.onclick=ev=>{ S.sel=i; const a=ev.target.dataset.a;
+      if(ev.target.classList.contains('x')){ S.regions.splice(i,1); S.sel=-1; }
+      else if(a==='s') g.start=+curT().toFixed(3);
+      else if(a==='e') g.end=+curT().toFixed(3);
+      else if(a==='c'){ g.start=null; g.end=null; }
+      else if(a==='j') setT(g.start??0);
+      if(g.start!=null&&g.end!=null&&g.end<g.start) [g.start,g.end]=[g.end,g.start];
+      renderRegions(); draw(); };
+    el.appendChild(d);
+  });
+}
+
+/* ---------- controls ---------- */
+function setTool(t){ S.tool=t; $('toolBox').classList.toggle('on',t==='box'); $('toolZone').classList.toggle('on',t==='zone');
+  $('hint').textContent = t==='zone' ? 'Drag a zone. Auto text removal will only look inside it (e.g. bottom third for subtitles).' : 'Drag on the video to mark anything to remove. Drag a box to move it, Delete to remove it.'; }
+$('toolBox').onclick=()=>setTool('box'); $('toolZone').onclick=()=>setTool('zone');
+$('clearZone').onclick=()=>{ S.zone=null; updateLabels(); draw(); };
+$('auto').onchange=draw;
+$('sens').onchange=()=>{ S.auto=[]; scan(); };
+function seg(id,key,cb){ $(id).querySelectorAll('button').forEach(b=>b.onclick=()=>{ $(id).querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b)); S[key]=b.dataset.v; cb&&cb(); }); }
+seg('mode','mode',()=>{ $('modeSub').textContent = S.mode==='fast' ? 'Smudge fill (OpenCV). Quick drafts and checks. Can look smeared on detail.' : 'AI fill (LaMa). Rebuilds texture. Use for final delivery.'; });
+seg('fmt','fmt');
+$('inBtn').onclick=()=>{ S.start=+curT().toFixed(3); if(S.end!=null&&S.end<=S.start) S.end=null; updateLabels(); };
+$('outBtn').onclick=()=>{ S.end=+curT().toFixed(3); if(S.start!=null&&S.start>=S.end) S.start=null; updateLabels(); };
+$('clrTrim').onclick=()=>{ S.start=S.end=null; updateLabels(); };
+function updateLabels(){
+  $('zoneLbl').textContent = S.zone ? 'Searching inside the blue zone only' : 'Search the whole frame';
+  $('clearZone').style.display = S.zone ? '' : 'none';
+  $('trimLbl').textContent = (S.start==null&&S.end==null) ? 'Whole clip' : `${fmtT(S.start??0)} → ${S.end==null?'end':fmtT(S.end)}`;
+}
+function settings(){
+  const off = S.start||0;
+  return { auto_text:$('auto').checked, zone:S.zone, mode:S.mode, padding:+$('pad').value, sensitivity:+$('sens').value,
+    stabilise:$('stab').checked, fmt:S.fmt, start:S.start, end:S.end, detect_every:3,
+    regions:S.regions.map(g=>({box:g.box, start:g.start==null?null:Math.max(0,g.start-off), end:g.end==null?null:g.end-off})) };
+}
+
+/* ---------- detect / preview ---------- */
+$('detectBtn').onclick=async()=>{
+  if(!S.vid) return; const b=$('detectBtn'); b.textContent='Detecting…'; b.disabled=true;
+  try{ const d=await (await api('/api/detect/'+S.vid,{t:curT(),sensitivity:+$('sens').value})).json(); S.auto=d.boxes; draw();
+       toast(d.boxes.length?`${d.boxes.length} text block${d.boxes.length>1?'s':''} on this frame`:'No text found on this frame'); }
+  catch(e){ toast(e.message) } finally{ b.textContent='Detect text on this frame'; b.disabled=false; }
+};
+function hideCompare(){ S.comparing=false; $('compare').style.display='none'; $('compareBadge').style.display='none'; $('previewBtn').classList.remove('on'); draw(); }
+$('previewBtn').onclick=async()=>{
+  if(!S.vid) return; if(S.comparing) return hideCompare();
+  V.pause(); $('play').textContent='▶';
+  const b=$('previewBtn'); b.textContent='Rendering preview…'; b.disabled=true;
+  try{
+    const s=settings(); s.regions=S.regions.map(g=>({box:g.box,start:g.start,end:g.end})); // preview uses absolute time
+    const r=await api('/api/preview/'+S.vid,{t:curT(),settings:s}); const url=URL.createObjectURL(await r.blob());
+    $('cmpImg').src=url; sizeOverlay(); S.comparing=true; $('compare').style.display='block'; $('compareBadge').style.display='block'; b.classList.add('on'); draw();
+  }catch(e){ toast('Preview failed: '+e.message) } finally{ b.textContent='Preview result'; b.disabled=false; }
+};
+
+/* ---------- run ---------- */
+$('run').onclick=async()=>{
+  if(!S.vid) return;
+  if(!$('auto').checked && !S.regions.length) return toast('Turn on auto text removal or draw at least one area.');
+  hideCompare(); V.pause();
+  try{
+    const d=await (await api('/api/process/'+S.vid,{settings:settings()})).json(); S.job=d.job;
+    $('prog').style.display='block'; $('prog').classList.remove('done'); $('pDone').style.display='none'; $('pErr').textContent=''; $('cancel').style.display='';
+    $('run').disabled=true; poll();
+  }catch(e){ toast(e.message) }
+};
+async function poll(){
+  let d; try{ d=await (await api('/api/status/'+S.job)).json(); }catch(e){ setTimeout(poll,1500); return; }
+  S.jobState=d.state;
+  $('pStage').textContent=d.stage||d.state; $('pBar').style.width=(100*d.progress).toFixed(1)+'%'; $('pPct').textContent=(100*d.progress).toFixed(0)+'%';
+  $('pEta').textContent = d.eta!=null && d.state==='running' ? (d.eta>90?`~${Math.round(d.eta/60)} min left`:`~${d.eta}s left`) : '';
+  if(d.state==='running'||d.state==='queued'){ setTimeout(poll,1000); return; }
+  $('run').disabled=false; $('cancel').style.display='none';
+  if(d.state==='done'){ $('prog').classList.add('done'); $('pStage').textContent='Done · '+d.filename; $('pDone').style.display='flex'; $('dl').href='/api/download/'+S.job; toast('Saved to '+(SYS.output_dir||'your Caption Remover folder')); }
+  else if(d.state==='error'){ $('pErr').textContent=d.error; }
+}
+$('cancel').onclick=()=>api('/api/cancel/'+S.job,{});
+$('reveal').onclick=()=>api('/api/reveal/'+S.job,{});
+$('openOut').onclick=()=>api('/api/open/'+S.job,{});
+
+/* ---------- updates ---------- */
+async function checkUpdate(manual){
+  try{
+    const d=await (await api('/api/update/check')).json();
+    if(d.available){
+      $('updTitle').textContent=`Version ${d.version} is available`; $('updNotes').textContent=d.notes||'';
+      $('updErr').textContent=''; $('updBarWrap').style.display='none'; $('updGo').textContent='Update now'; $('updGo').disabled=false; $('updGo').dataset.mode='install';
+      $('upd').style.display='block';
+    } else if(manual){ toast(d.enabled===false ? 'Updates are off in this copy' : (d.error ? 'Could not check for updates (offline?)' : `You're on the latest version (v${d.current})`)); }
+  }catch(e){ if(manual) toast('Could not check for updates'); }
+}
+$('ver').onclick=()=>checkUpdate(true);
+$('updLater').onclick=()=>$('upd').style.display='none';
+$('updGo').onclick=async()=>{
+  const b=$('updGo');
+  if(b.dataset.mode==='restart'){
+    try{ await api('/api/update/restart',{}); b.textContent='Restarting…'; b.disabled=true; }catch(e){ $('updErr').textContent=e.message; }
+    return;
+  }
+  b.disabled=true; b.textContent='Downloading…'; $('updBarWrap').style.display='block'; $('updErr').textContent='';
+  try{ await api('/api/update/install',{}); }catch(e){ $('updErr').textContent=e.message; b.disabled=false; b.textContent='Try again'; return; }
+  const tick=async()=>{
+    const st=await (await api('/api/update/status')).json();
+    $('updBar').style.width=(100*st.progress).toFixed(0)+'%';
+    if(st.state==='downloading'||st.state==='installing'){ b.textContent=st.state==='installing'?'Installing…':`Downloading… ${(100*st.progress).toFixed(0)}%`; setTimeout(tick,500); return; }
+    if(st.state==='ready'){
+      $('updBarWrap').style.display='none';
+      $('updTitle').textContent=`Version ${st.version} is ready`;
+      $('updNotes').textContent = st.needs_setup ? 'Restart to finish. This update adds new components, so the app will spend a minute or two installing them when it reopens.' : 'Restart to finish. Takes a few seconds.';
+      b.dataset.mode='restart'; b.disabled=false; b.textContent='Restart now';
+    } else { $('updErr').textContent=st.error||'Update failed'; b.disabled=false; b.textContent='Try again'; }
+  };
+  tick();
+};
+setTimeout(()=>checkUpdate(false), 2500);
+</script>
+</body>
+</html>
