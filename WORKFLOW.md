@@ -14,6 +14,14 @@
 - `1.x.0`: new features
 - Always go up; the release script refuses to publish a lower or equal number.
 
+## Windows
+- One update package serves both Mac and Windows, so Release.command updates Windows users too.
+- Release.command also builds the full Windows download (`Caption-Remover-Windows-<version>.zip`) from the prebuilt launcher `packaging/windows/Caption Remover.exe`. No Windows machine is needed.
+- The launcher only needs rebuilding if `packaging/windows/launcher/main.go` changes: run `packaging/windows/build_launcher.sh` (needs Go).
+
+## Download page
+`index.html` in the public updates repo is the download page. It always links to the latest Mac and Windows downloads and shows the current version and "what's new" automatically.
+
 ## What updates can't change by themselves
 The launcher inside the .app (first-run setup, Rosetta fix) only changes when you install a fresh app. That's rare. Release.command also builds the full app zip (`dist/Caption-Remover-Mac-<version>.zip`) for those cases and for new installs.
 
