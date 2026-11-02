@@ -6,8 +6,8 @@
    - Interface-only change (`static/index.html`): right-click in the window → **Reload**.
    - Engine/app change (`.py` files): close the window, double-click Dev Mode again.
 3. **Ship it:** double-click **Release.command**, type the new version (e.g. 1.0.3) and one line about what changed.
-   It saves the code to your private GitHub repo and publishes the update.
-4. **Your installed app** (and anyone else's) shows "Version 1.0.3 is available" on next launch → **Update now** → **Restart now**. Done in seconds.
+   It saves the code to your private GitHub repo and publishes the update to the public updates repo.
+4. **Your installed app** (and anyone else's) shows "Version 1.0.3 is available" on next launch (allow up to 5 minutes after publishing) → **Update now** → **Restart now**. Done in seconds.
 
 ## Version numbers
 - `1.0.x`: fixes and small tweaks
@@ -23,5 +23,5 @@ The launcher inside the .app (first-run setup, Rosetta fix) only changes when yo
 - Every release is tagged in Git, so any version can be restored.
 
 ## One-time setup on this Mac
-- `brew install gh` then `gh auth login` (lets Release.command publish to GitHub).
+- Git must be able to push to your GitHub repos (it already can if Claude Code pushes Tru Studio Bot from this Mac).
 - `packaging/release.json` holds your GitHub username and the updates repo name.
