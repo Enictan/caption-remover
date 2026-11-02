@@ -23,6 +23,20 @@ If something goes wrong, the log is at `~/Library/Logs/Caption Remover.log`.
 
 Finished files save to **Movies › Caption Remover** (changeable in Settings).
 
+## Voice (dub, captions, voiceovers)
+Switch to **Voice** at the top left (or press **Voice it** after cleaning a video).
+- **First time:** click **Set up voice engine**. It installs Voicebox, an open-source voice studio, privately inside the app's folder: about 6 GB, 15 to 40 minutes. Each voice model downloads the first time you use it.
+- **Video & audio:** open a video or audio file → **Transcribe** → edit the lines →
+  - **Captions:** export SRT, VTT or text (original or translated).
+  - **Translate**, then **Dub the whole thing** in a cloned or chosen voice.
+  - **Re-say edited lines:** change a few words and only those moments are replaced, in the same voice.
+  - **Sound:** clean up noise, even out loudness, extract audio, add or replace a soundtrack (works without the voice engine).
+- **Voiceover:** paste a script, pick a voice, save WAV or MP3.
+- **Voices:** clone from a 5–25 s recording, describe a new voice, or add ready-made ones.
+
+Voice results save to **Movies › Caption Remover › Voice**. Dubs also save a voice-only WAV for your edit.
+Only clone voices you have permission to use.
+
 ## Tips
 - Big captions over busy, fast-moving shots are the hardest case. Check those spots, and patch in Premiere if needed.
 - Raise **Edge padding** if you see leftover outline or shadow around removed text.

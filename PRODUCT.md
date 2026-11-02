@@ -20,3 +20,10 @@ Current state (v1.0): Mac app for in-house use. It's a small app bundle (~300 KB
 6. **Licence keys + payments.** e.g. Lemon Squeezy or Paddle (they handle global tax and issue keys), with a key check on launch.
 7. **Auto-update.** Sparkle (Mac) / WinSparkle (Windows), or a simple "new version available" check.
 8. **Quality upgrade.** Add ProPainter as an optional "Best" mode for camera moves (needs a strong GPU; heavier install).
+9. **Voice tools licences.** Voicebox is MIT. It's installed from a pinned commit (`voice.py: VOICEBOX_REF`) into `<support>/voice`. The voice models it downloads have their own licences (e.g. Qwen3-TTS Apache-2.0, Kokoro Apache-2.0, Chatterbox MIT, Whisper MIT); check each before selling, and keep the consent note on cloning. Windows: the same code runs (CUDA/DirectML via Voicebox); the voice engine setup needs a Python 3.12 there.
+
+## Voice code layout
+- `voice.py`: installs/starts the Voicebox server (own Python env), and runs transcribe, translate, clone, dub, fix-lines, voiceover and sound jobs. Uses the app's ffmpeg.
+- `voice_worker.py`: runs inside the voice env: starts Voicebox with a parent watchdog, and does Whisper transcription with timestamps.
+- `static/voice.html`: the Voice workspace (shown in a frame over the Clean UI).
+

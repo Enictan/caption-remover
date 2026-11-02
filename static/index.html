@@ -75,7 +75,7 @@ kbd{font:500 10px Inter;color:var(--tx3);border:1px solid var(--line2);border-ra
 .card h3{font-size:14px;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:9px}
 .sum{display:grid;grid-template-columns:76px 1fr;gap:7px 10px;margin-bottom:16px}
 .sum dt{color:var(--tx3)} .sum dd{color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.acts{display:flex;justify-content:flex-end;gap:8px}
+.acts{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
 .pbar{height:6px;background:var(--p3);border-radius:6px;overflow:hidden;margin:4px 0 8px}
 .pbar i{display:block;height:100%;width:0;background:var(--gold);transition:width .35s}
 .prow{display:flex;justify-content:space-between;color:var(--tx2);font-size:12px;margin-bottom:14px}
@@ -170,6 +170,10 @@ kbd{font:500 10px Inter;color:var(--tx3);border:1px solid var(--line2);border-ra
 .lnk{color:var(--gold2);cursor:pointer} .lnk:hover{text-decoration:underline}
 .upbox{background:var(--p2);border:1px solid var(--line);border-radius:10px;padding:14px;margin:8px 0 6px}
 .upbox .v{font-size:22px;font-weight:600;margin-bottom:2px}
+/* ---------- Clean / Voice switch ---------- */
+.wsw button{padding:4px 11px;font-weight:500}
+.wsw button.on{color:var(--gold2)}
+#voiceFrame{position:fixed;inset:0;width:100%;height:100%;border:0;z-index:90;display:none;background:var(--bg)}
 </style>
 </head>
 <body>
@@ -177,6 +181,7 @@ kbd{font:500 10px Inter;color:var(--tx3);border:1px solid var(--line2);border-ra
   <!-- ================= toolbar ================= -->
   <header id="tb">
     <div class="brand"><i><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M6 20h7M16 20h2"/></svg></i>Caption Remover</div>
+    <div class="seg wsw" id="wsw" title="Switch between cleaning video and voice tools"><button data-w="clean" class="on">Clean</button><button data-w="voice">Voice</button></div>
     <div class="file"><b id="fName">No video</b><span id="fMeta"></span></div>
     <div class="grow"></div>
     <div class="seg tools" id="tools">
@@ -322,7 +327,7 @@ kbd{font:500 10px Inter;color:var(--tx3);border:1px solid var(--line2);border-ra
      <div>Open video<kbd>⌘O</kbd></div><div>Remove captions<kbd>⌘E</kbd></div><div>Settings<kbd>⌘,</kbd></div>
     </div>
     <div class="h5" style="margin-top:14px">Tips</div>
-    <div class="note" style="margin-top:0;color:var(--tx2)">Real text in the scene (signs, shirts, labels) getting removed? Draw a Text zone over where the captions sit. Leftover outlines? Raise Edge padding. Missed faint text? Raise Sensitivity.</div>
+    <div class="note" style="margin-top:0;color:var(--tx2)">Need captions, a dub or a re-said line? Switch to <b style="color:var(--tx)">Voice</b> at the top left, or press <b style="color:var(--tx)">Voice it</b> after a video is cleaned. Real text in the scene (signs, shirts, labels) getting removed? Draw a Text zone over where the captions sit. Leftover outlines? Raise Edge padding. Missed faint text? Raise Sensitivity.</div>
    </section>
 
    <section class="ptab" data-p="about">
@@ -330,11 +335,12 @@ kbd{font:500 10px Inter;color:var(--tx3);border:1px solid var(--line2);border-ra
      <div><h2>Caption Remover</h2><p>Removes burned-in captions, subtitles and graphics from video, entirely on this computer.</p></div></div>
     <dl class="kv"><dt>Version</dt><dd id="aVer">—</dd><dt>Processing on</dt><dd id="aDev">—</dd><dt>Made by</dt><dd>The Tru Studio · <span class="lnk" id="aSite">thetrustudio.com</span></dd>
      <dt>Troubleshooting</dt><dd><span class="lnk" id="aLog">Show log file</span> · <span class="lnk" id="aData">Show app data folder</span></dd></dl>
-    <div class="credits">Built with open-source software: LaMa inpainting model (Apache 2.0), EasyOCR / CRAFT text detection (Apache 2.0), PyTorch (BSD), OpenCV (Apache 2.0), FFmpeg (LGPL/GPL). © 2026 The Tru Studio.</div>
+    <div class="credits">Built with open-source software: LaMa inpainting model (Apache 2.0), EasyOCR / CRAFT text detection (Apache 2.0), PyTorch (BSD), OpenCV (Apache 2.0), FFmpeg (LGPL/GPL). Voice tools: Voicebox (MIT), Whisper (MIT) and the voice models it downloads, each under its own licence. © 2026 The Tru Studio.</div>
    </section>
   </div>
  </div>
 </div>
+<iframe id="voiceFrame" title="Voice"></iframe>
 <div id="dropov"><div>Drop to open</div></div>
 <div id="toast"></div>
 <div id="upd">
@@ -736,8 +742,8 @@ async function poll(){
   if(d.state==='done'){
     sheet(`<h3><i class="ok"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg></i>Captions removed</h3>
       <dl class="sum"><dt>File</dt><dd title="${esc(d.output)}">${esc(d.filename)}</dd><dt>Saved in</dt><dd>${esc(folderName())}</dd></dl>
-      <div class="acts"><button class="btn ghost" id="dDone">Done</button><button class="btn" id="dRev">Show in ${SYS.folder}</button>${SYS.native?'<button class="btn gold" id="dPlay">Play</button>':`<a class="btn gold" href="/api/download/${S.job}" style="text-decoration:none">Download</a>`}</div>`);
-    $('dDone').onclick=closeSheet; $('dRev').onclick=()=>api('/api/reveal/'+S.job,{}); if($('dPlay')) $('dPlay').onclick=()=>api('/api/open/'+S.job,{});
+      <div class="acts"><button class="btn ghost" id="dDone">Done</button><button class="btn" id="dRev">Show in ${SYS.folder}</button><button class="btn" id="dVoice" title="Dub it, fix lines or add captions in Voice">Voice it</button>${SYS.native?'<button class="btn gold" id="dPlay">Play</button>':`<a class="btn gold" href="/api/download/${S.job}" style="text-decoration:none">Download</a>`}</div>`);
+    $('dDone').onclick=closeSheet; $('dRev').onclick=()=>api('/api/reveal/'+S.job,{}); $('dVoice').onclick=()=>{ closeSheet(); showVoice({job:S.job}); }; if($('dPlay')) $('dPlay').onclick=()=>api('/api/open/'+S.job,{});
   } else if(d.state==='cancelled'){ closeSheet(); toast('Cancelled'); }
   else { sheet(`<h3>Something went wrong</h3><div class="err">${esc(d.error||'Unknown error')}</div><div class="acts"><button class="btn" id="eC">Close</button></div>`); $('eC').onclick=closeSheet; }
 }
@@ -813,6 +819,20 @@ fetch('/api/system').then(r=>r.json()).then(d=>{ $('pVer').textContent='v'+d.ver
     $('empty').querySelector('p').textContent='Drop a file anywhere in this window, or browse for one. Everything is processed on this PC.';
   } });
 renderInspector(); layout(); sizeTL();
+
+/* ================= Voice workspace (static/voice.html in a frame) ================= */
+function showVoice(open){
+  const f=$('voiceFrame');
+  if(!f.src) f.src='/voice';
+  f.style.display='block';
+  const send=()=>f.contentWindow.postMessage({cr:'shown',open:open||null,clean:S.vid?{vid:S.vid,name:S.name}:null},'*');
+  if(f.dataset.ready) send(); else f.onload=()=>{ f.dataset.ready='1'; send(); };
+}
+function showClean(){ $('voiceFrame').style.display='none'; window.focus(); }
+$('wsw').querySelectorAll('button').forEach(b=>b.onclick=()=>{ if(b.dataset.w==='voice') showVoice(); });
+window.addEventListener('message',e=>{ const d=e.data||{};
+  if(d.cr==='clean') showClean();
+  if(d.cr==='cleanFile' && d.path) toast('Saved: '+d.path.split(/[\\/]/).pop()); });
 </script>
 </body>
 </html>

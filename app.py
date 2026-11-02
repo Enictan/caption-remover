@@ -26,6 +26,7 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 
 import engine
 import updater
+import voice
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 VERSION = "1.2.0"
@@ -90,6 +91,7 @@ def out_dir():
 
 
 WORK = DEFAULT_OUT   # kept for older code paths
+voice.init(JOBS_DIR, out_dir)
 
 app = FastAPI(title="Caption Remover")
 videos: dict[str, dict] = {}   # id -> {"path", "info", "name"}
@@ -304,6 +306,10 @@ def update_restart():
     for j in jobs.values():
         if j.state in ("queued", "running"):
             raise HTTPException(409, "A video is still processing. Restart when it's finished.")
+    for j in voice.jobs.values():
+        if j.state == "running":
+            raise HTTPException(409, "A voice task is still running. Restart when it's finished.")
+    voice.stop()
     threading.Timer(0.4, updater.restart).start()
     return {"ok": True}
 
@@ -356,6 +362,267 @@ def open_folder(body: dict):
 def video_file(vid: str):
     v = _video(vid)
     return FileResponse(v["path"])
+
+
+# =====================================================================================
+#  Voice (Voicebox) — see voice.py
+# =====================================================================================
+from fastapi import Request  # noqa: E402
+
+
+def _vjob(kind, fn, *args, exclusive=True):
+    try:
+        j = voice.start_job(kind, fn, *args, exclusive=exclusive)
+    except RuntimeError as e:
+        raise HTTPException(409, str(e))
+    return j.as_dict()
+
+
+def _vmedia(mid):
+    try:
+        return voice.get_media(mid)
+    except KeyError as e:
+        raise HTTPException(404, str(e))
+
+
+def _vneed():
+    try:
+        voice.require()
+    except RuntimeError as e:
+        raise HTTPException(409, str(e))
+
+
+def _media_out(m):
+    return {k: m[k] for k in ("id", "name", "info", "segments", "lang")} | {"target": m.get("target")}
+
+
+@app.get("/voice", response_class=HTMLResponse)
+def voice_page():
+    with open(os.path.join(APP_DIR, "static", "voice.html"), encoding="utf-8") as f:
+        return f.read()
+
+
+@app.get("/api/voice/status")
+def voice_status():
+    return voice.status()
+
+
+@app.get("/api/voice/info")
+def voice_info():
+    return {"speak": voice.SPEAK_LANGS, "text": voice.TEXT_LANGS, "engines": voice.ENGINES,
+            "ref": voice.VOICEBOX_REF[:8], "home": voice.HOME, "need_gb": voice.NEED_GB}
+
+
+@app.post("/api/voice/setup")
+def voice_setup():
+    return voice.setup()
+
+
+@app.post("/api/voice/setup/cancel")
+def voice_setup_cancel():
+    voice.cancel_setup()
+    return voice.status()
+
+
+@app.post("/api/voice/start")
+def voice_start():
+    return voice.start()
+
+
+@app.post("/api/voice/stop")
+def voice_stop():
+    voice.stop()
+    return voice.status()
+
+
+@app.api_route("/api/voice/vb/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
+async def voice_proxy(path: str, request: Request):
+    """Pass-through to the Voicebox server (voices, presets, models)."""
+    _vneed()
+    body = await request.body()
+    hdr = {"Content-Type": request.headers["content-type"]} if "content-type" in request.headers else {}
+    q = ("?" + request.url.query) if request.url.query else ""
+    import asyncio
+    code, ctype, data = await asyncio.to_thread(voice.raw, request.method, "/" + path + q, body or None, hdr, 300)
+    return Response(data, status_code=code, media_type=ctype or None)
+
+
+@app.post("/api/voice/media/upload")
+async def voice_upload(file: UploadFile = File(...)):
+    d = os.path.join(voice.WORK, uuid.uuid4().hex[:10])
+    os.makedirs(d, exist_ok=True)
+    ext = os.path.splitext(file.filename or "media.mp4")[1] or ".mp4"
+    path = os.path.join(d, "input" + ext)
+    with open(path, "wb") as f:
+        while chunk := await file.read(8 * 1024 * 1024):
+            f.write(chunk)
+    try:
+        return _media_out(voice.add_media(path, file.filename or "media"))
+    except Exception as e:
+        shutil.rmtree(d, ignore_errors=True)
+        raise HTTPException(400, str(e))
+
+
+@app.post("/api/voice/media/from_clean")
+def voice_from_clean(body: dict):
+    """Open the video that's loaded in Clean, or a finished cleaned video."""
+    if body.get("job"):
+        j = jobs.get(body["job"])
+        if not j or j.state != "done":
+            raise HTTPException(404, "That cleaned video isn't ready")
+        path, name = j.out, os.path.basename(j.out)
+    else:
+        v = _video(body.get("vid", ""))
+        path, name = v["path"], v["name"]
+    try:
+        return _media_out(voice.add_media(path, name, ref=body))
+    except Exception as e:
+        raise HTTPException(400, str(e))
+
+
+@app.post("/api/voice/media/from_file")
+def voice_from_file(body: dict):
+    """Open a file Voice made (e.g. a finished dub) to keep working on it."""
+    p = body.get("path", "")
+    if not voice.allowed_file(p) or not os.path.exists(p):
+        raise HTTPException(404, "File not found")
+    try:
+        return _media_out(voice.add_media(p, os.path.basename(p)))
+    except Exception as e:
+        raise HTTPException(400, str(e))
+
+
+@app.get("/api/voice/media/{mid}")
+def voice_media(mid: str):
+    return _media_out(_vmedia(mid))
+
+
+@app.get("/api/voice/media/{mid}/file")
+def voice_media_file(mid: str):
+    return FileResponse(_vmedia(mid)["path"])
+
+
+@app.post("/api/voice/media/{mid}/transcribe")
+def voice_transcribe(mid: str, body: dict):
+    _vneed(); _vmedia(mid)
+    return _vjob("transcribe", voice.job_transcribe, mid, body.get("model", "turbo"), body.get("language") or "auto")
+
+
+@app.post("/api/voice/media/{mid}/translate")
+def voice_translate(mid: str, body: dict):
+    _vneed(); _vmedia(mid)
+    return _vjob("translate", voice.job_translate, mid, body.get("target", "en"), body.get("source"),
+                 body.get("size", "4B"), body.get("segments"))
+
+
+@app.post("/api/voice/media/{mid}/clone")
+def voice_clone_media(mid: str, body: dict):
+    _vneed(); _vmedia(mid)
+    return _vjob("clone", voice.job_clone_from_media, mid, body.get("name"), body.get("segments"))
+
+
+@app.post("/api/voice/media/{mid}/render")
+def voice_render(mid: str, body: dict):
+    _vneed(); _vmedia(mid)
+    return _vjob("render", voice.job_render, mid, body)
+
+
+@app.post("/api/voice/media/{mid}/tool")
+def voice_tool(mid: str, body: dict):
+    _vmedia(mid)
+    return _vjob("tool", voice.job_audio_tool, mid, body.get("op"), body.get("opts") or {})
+
+
+@app.post("/api/voice/media/{mid}/captions")
+def voice_captions(mid: str, body: dict):
+    _vmedia(mid)
+    try:
+        return voice.captions(mid, body.get("which", "original"), body.get("fmt", "srt"), body.get("segments"))
+    except RuntimeError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.post("/api/voice/upload_audio")
+async def voice_upload_audio(file: UploadFile = File(...)):
+    d = os.path.join(voice.WORK, "uploads")
+    os.makedirs(d, exist_ok=True)
+    name = os.path.basename(file.filename or "audio.wav")
+    path = os.path.join(d, uuid.uuid4().hex[:6] + "_" + name)
+    with open(path, "wb") as f:
+        while chunk := await file.read(8 * 1024 * 1024):
+            f.write(chunk)
+    try:
+        info = voice.probe(path)
+    except Exception as e:
+        raise HTTPException(400, str(e))
+    return {"path": path, "name": name, "info": info}
+
+
+@app.post("/api/voice/clone_file")
+def voice_clone_file(body: dict):
+    _vneed()
+    p = body.get("path", "")
+    if not voice.allowed_file(p):
+        raise HTTPException(400, "Upload the sample first")
+    return _vjob("clone", voice.job_clone_from_file, p, body.get("name"), body.get("language") or "en",
+                 body.get("reference_text"))
+
+
+@app.post("/api/voice/voiceover")
+def voice_voiceover(body: dict):
+    _vneed()
+    if not (body.get("text") or "").strip() or not body.get("profile_id"):
+        raise HTTPException(400, "Write a script and pick a voice")
+    return _vjob("voiceover", voice.job_voiceover, body["profile_id"], body["text"].strip(),
+                 body.get("language", "en"), body.get("engine"), body.get("model_size"), body.get("instruct"),
+                 body.get("fmt", "wav"), body.get("title"))
+
+
+@app.post("/api/voice/line")
+def voice_line(body: dict):
+    _vneed()
+    if not (body.get("text") or "").strip() or not body.get("profile_id"):
+        raise HTTPException(400, "Pick a voice first")
+    return _vjob("line", voice.job_line, body["profile_id"], body["text"].strip(), body.get("language", "en"),
+                 body.get("engine"), body.get("model_size"))
+
+
+@app.get("/api/voice/jobs/{jid}")
+def voice_job(jid: str):
+    j = voice.jobs.get(jid)
+    if not j:
+        raise HTTPException(404, "Task not found")
+    return j.as_dict()
+
+
+@app.post("/api/voice/jobs/{jid}/cancel")
+def voice_job_cancel(jid: str):
+    j = voice.jobs.get(jid)
+    if j:
+        j.cancel()
+    return {"ok": True}
+
+
+@app.get("/api/voice/file")
+def voice_file(p: str):
+    if not voice.allowed_file(p) or not os.path.exists(p):
+        raise HTTPException(404, "File not found")
+    return FileResponse(p)
+
+
+@app.post("/api/voice/reveal")
+def voice_reveal(body: dict):
+    p = body.get("p", "")
+    if body.get("what") in ("setup_log", "engine_log", "home"):
+        p = {"setup_log": voice.SETUP_LOG, "engine_log": voice.ENGINE_LOG, "home": voice.HOME}[body["what"]]
+        if not os.path.exists(p):
+            raise HTTPException(404, "Not available yet")
+        _open(p, reveal=body["what"] != "home")
+        return {"ok": True}
+    if not voice.allowed_file(p) or not os.path.exists(p):
+        raise HTTPException(404, "File not found")
+    _open(p, reveal=not body.get("open"))
+    return {"ok": True}
 
 
 def _warm():
@@ -481,6 +748,7 @@ def main():
         _mac_icon()  # must run on the main thread, before the event loop starts
     webview.start(debug=bool(os.environ.get("CR_DEV")))  # dev: right-click > Reload / Inspect
     server.should_exit = True
+    voice.stop()
     os._exit(0)
 
 
