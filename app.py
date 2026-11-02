@@ -23,7 +23,7 @@ import engine
 import updater
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-VERSION = "1.0.1"
+VERSION = "1.0.2"
 NATIVE = False  # set when running inside the native window
 _home = os.path.expanduser("~")
 _vids = "Movies" if sys.platform == "darwin" else "Videos"
