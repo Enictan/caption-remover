@@ -128,6 +128,48 @@ kbd{font:500 10px Inter;color:var(--tx3);border:1px solid var(--line2);border-ra
 #upd b{color:var(--gold2);font-weight:600}
 #upd .n{color:var(--tx2);font-size:11.5px;margin:5px 0 10px;max-height:52px;overflow:hidden}
 #upd .acts{justify-content:flex-start}
+
+/* ---------- settings & help ---------- */
+.iconbar{display:flex;gap:2px}
+#prefs{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;background:rgba(5,5,6,.62)}
+.pcard{width:760px;height:520px;max-width:calc(100vw - 40px);max-height:calc(100vh - 40px);display:grid;grid-template-columns:186px 1fr;background:var(--p1);border:1px solid var(--line2);border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,.6);overflow:hidden}
+.prail{background:var(--p2);border-right:1px solid var(--line);padding:16px 10px;display:flex;flex-direction:column;gap:2px}
+.prail .ttl{display:flex;align-items:center;gap:9px;font-weight:600;padding:0 8px 14px}
+.prail .ttl i{width:26px;height:26px;border-radius:7px;background:#1e1b14;color:var(--gold);display:grid;place-items:center}
+.prail button{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:7px;color:var(--tx2);text-align:left}
+.prail button:hover{color:var(--tx);background:var(--p3)}
+.prail button.on{background:var(--p3);color:var(--tx)}
+.prail button svg{color:var(--tx3)} .prail button.on svg{color:var(--gold2)}
+.prail .sp{flex:1}
+.pbody{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0}
+.phead{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 6px}
+.phead h3{font-size:15px;font-weight:600}
+.pclose{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;color:var(--tx2)}
+.pclose:hover{background:var(--p3);color:var(--tx)}
+.ptab{display:none;padding:6px 20px 18px;overflow:hidden;flex:1;min-height:0}
+.ptab.on{display:block}
+.prow{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px solid var(--line)}
+.prow:last-child{border-bottom:0}
+.prow .l b{display:block;font-weight:500;color:var(--tx)}
+.prow .l span{display:block;color:var(--tx3);font-size:11.5px;margin-top:2px;max-width:380px}
+.path{max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx2);direction:rtl;text-align:left}
+.steps{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:6px 0 14px}
+.step{background:var(--p2);border:1px solid var(--line);border-radius:9px;padding:10px 11px}
+.step b{display:flex;align-items:center;gap:7px;margin-bottom:3px;font-weight:600}
+.step b i{width:18px;height:18px;border-radius:50%;background:var(--gold);color:#1b1407;font-style:normal;font-size:10.5px;display:grid;place-items:center}
+.step span{color:var(--tx2);font-size:11.5px;line-height:1.45}
+.keys{display:grid;grid-template-columns:repeat(3,1fr);gap:5px 14px;font-size:11.5px;color:var(--tx2)}
+.keys div{display:flex;justify-content:space-between;align-items:center;gap:8px;white-space:nowrap} .keys kbd{margin:0;color:var(--tx2);white-space:nowrap}
+.h5{font-size:10.5px;font-weight:600;letter-spacing:.9px;text-transform:uppercase;color:var(--tx3);margin:4px 0 8px}
+.about{display:flex;gap:16px;align-items:center;padding:6px 0 14px;border-bottom:1px solid var(--line)}
+.about .ai{width:64px;height:64px;border-radius:16px;background:#1c1912;color:var(--gold);display:grid;place-items:center;flex:none}
+.about h2{font-size:17px;font-weight:600} .about p{color:var(--tx2);margin-top:2px}
+.kv{display:grid;grid-template-columns:120px 1fr;gap:7px 12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.kv dt{color:var(--tx3)} .kv dd{color:var(--tx2)}
+.credits{color:var(--tx3);font-size:11.5px;line-height:1.6;padding-top:10px}
+.lnk{color:var(--gold2);cursor:pointer} .lnk:hover{text-decoration:underline}
+.upbox{background:var(--p2);border:1px solid var(--line);border-radius:10px;padding:14px;margin:8px 0 6px}
+.upbox .v{font-size:22px;font-weight:600;margin-bottom:2px}
 </style>
 </head>
 <body>
@@ -135,7 +177,7 @@ kbd{font:500 10px Inter;color:var(--tx3);border:1px solid var(--line2);border-ra
   <!-- ================= toolbar ================= -->
   <header id="tb">
     <div class="brand"><i><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M6 20h7M16 20h2"/></svg></i>Caption Remover</div>
-    <div class="file"><b id="fName">No video open</b><span id="fMeta"></span></div>
+    <div class="file"><b id="fName">No video</b><span id="fMeta"></span></div>
     <div class="grow"></div>
     <div class="seg tools" id="tools">
       <button data-t="select" class="on" title="Select, move and resize areas (V)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 8-6 2-3 6z"/></svg>Select<kbd>V</kbd></button>
@@ -148,7 +190,8 @@ kbd{font:500 10px Inter;color:var(--tx3);border:1px solid var(--line2);border-ra
       <button data-v="compare" title="Before / after split on this frame (2)">Compare</button>
       <button data-v="result" title="Result on this frame (3)">Result</button>
     </div>
-    <button class="btn gold" id="exportBtn" disabled title="Export (⌘E)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>Export</button>
+    <div class="iconbar"><button class="ib" id="helpBtn" title="Help (?)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 015 0c0 1.7-2.5 2-2.5 4"/><path d="M12 17h.01"/></svg></button><button class="ib" id="setBtn" title="Settings (⌘,)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg></button></div>
+    <button class="btn gold" id="exportBtn" disabled title="Remove captions and save a clean copy (⌘E)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M4 20L15 9"/><path d="M14 4v3M12.5 5.5h3M19 9v3M17.5 10.5h3M19 3l.01 0"/></svg>Remove captions</button>
   </header>
 
   <!-- ================= viewer ================= -->
@@ -188,11 +231,11 @@ kbd{font:500 10px Inter;color:var(--tx3);border:1px solid var(--line2);border-ra
       <h4>Fill</h4>
       <div class="seg full" id="mode"><button data-v="fast">Fast</button><button data-v="quality" class="on">Quality</button></div>
       <div class="note" id="modeNote">AI fill that rebuilds texture. Use for delivery.</div>
+      <div class="note" id="smartNote" style="margin-top:2px"></div>
       <div class="row" style="margin-top:6px"><label>Edge padding</label><div class="slider"><input type="range" id="pad" min="0" max="24" step="1" value="6"><span class="val" id="padV">6</span></div></div>
-      <div class="row"><label for="stab">Steady fill on still shots</label><label class="tog"><input type="checkbox" id="stab" checked><span></span></label></div>
     </div>
     <div class="sec gate" style="border-bottom:0">
-      <h4>Export</h4>
+      <h4>Save as</h4>
       <div class="seg full" id="fmt"><button data-v="mp4" class="on">MP4 · H.264</button><button data-v="prores">ProRes 422 HQ</button></div>
       <div class="note" id="rangeNote">Whole clip</div>
     </div>
@@ -218,6 +261,80 @@ kbd{font:500 10px Inter;color:var(--tx3);border:1px solid var(--line2);border-ra
 </div>
 
 <input type="file" id="file" accept="video/*,.mov,.mxf,.mkv,.avi,.m4v,.webm" hidden>
+
+<div id="prefs">
+ <div class="pcard">
+  <nav class="prail">
+   <div class="ttl"><i><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M6 20h7M16 20h2"/></svg></i>Caption Remover</div>
+   <button data-p="general" class="on"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>General</button>
+   <button data-p="removal"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20L15 9"/><path d="M14 4v3M12.5 5.5h3M19 9v3M17.5 10.5h3"/></svg>Removal</button>
+   <button data-p="updates"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 11-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>Updates</button>
+   <button data-p="help"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 015 0c0 1.7-2.5 2-2.5 4"/><path d="M12 17h.01"/></svg>Help</button>
+   <button data-p="about"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/></svg>About</button>
+   <div class="sp"></div>
+   <div style="color:var(--tx3);font-size:11px;padding:0 9px" id="pVer">v—</div>
+  </nav>
+  <div class="pbody">
+   <div class="phead"><h3 id="pTitle">General</h3><button class="pclose" id="pClose" title="Close (Esc)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+
+   <section class="ptab on" data-p="general">
+    <div class="prow"><div class="l"><b>Save cleaned videos to</b><span class="path" id="pOut" title="">—</span></div>
+      <div style="display:flex;gap:6px"><button class="btn sm" id="pOutShow">Show</button><button class="btn sm" id="pOutChange">Change…</button></div></div>
+    <div class="prow"><div class="l"><b>Default quality</b><span>Used for each new video. You can still switch per video.</span></div>
+      <div class="seg" id="pMode"><button data-v="fast">Fast</button><button data-v="quality">Quality</button></div></div>
+    <div class="prow"><div class="l"><b>Default format</b><span>MP4 for sharing, ProRes for editing in Premiere or Resolve.</span></div>
+      <div class="seg" id="pFmt"><button data-v="mp4">MP4</button><button data-v="prores">ProRes 422 HQ</button></div></div>
+    <div class="prow"><div class="l"><b>Check for updates automatically</b><span>Looks once each time the app opens. Nothing installs without your click.</span></div>
+      <label class="tog"><input type="checkbox" id="pAuto"><span></span></label></div>
+   </section>
+
+   <section class="ptab" data-p="removal">
+    <div class="prow"><div class="l"><b>Letter-shaped masks</b><span>Removes only the letters, outlines and caption boxes, not whole rectangles. Gives much cleaner results.</span></div>
+      <label class="tog"><input type="checkbox" id="pPrecise"><span></span></label></div>
+    <div class="prow"><div class="l"><b>Use real background from nearby frames</b><span>When the camera or captions move, copies what was actually behind the text instead of guessing.</span></div>
+      <label class="tog"><input type="checkbox" id="pTemporal"><span></span></label></div>
+    <div class="prow"><div class="l"><b>Steady fill on still shots</b><span>Keeps patches from shimmering when the camera doesn't move.</span></div>
+      <label class="tog"><input type="checkbox" id="pStab"><span></span></label></div>
+    <div class="prow"><div class="l"><b>Look for text</b><span>More often catches fast word-by-word captions sooner, but takes longer.</span></div>
+      <div class="seg" id="pEvery"><button data-v="1">Every frame</button><button data-v="2">Every 2nd</button><button data-v="3">Every 3rd</button></div></div>
+    <div style="display:flex;justify-content:flex-end;padding-top:12px"><button class="btn sm ghost" id="pReset">Restore recommended</button></div>
+   </section>
+
+   <section class="ptab" data-p="updates">
+    <div class="upbox"><div class="v" id="uCur">v—</div><div style="color:var(--tx2)" id="uStatus">Checking…</div></div>
+    <div class="note" id="uNotes" style="min-height:40px;margin:10px 0 14px;color:var(--tx2)"></div>
+    <div style="display:flex;gap:8px"><button class="btn gold" id="uCheck">Check now</button><button class="btn" id="uInstall" style="display:none">Update now</button></div>
+    <div class="note" style="margin-top:16px">Updates are small (a few hundred KB) and keep your settings. If an update ever fails to start, the app automatically goes back to the previous version.</div>
+   </section>
+
+   <section class="ptab" data-p="help">
+    <div class="steps">
+     <div class="step"><b><i>1</i>Open a video</b><span>Drop it on the window or press ⌘O. Text is found automatically and shown in amber.</span></div>
+     <div class="step"><b><i>2</i>Mark anything else</b><span>Use the Area tool (A) for logos, lower thirds or stickers. Drag its ends on the timeline to set when it shows.</span></div>
+     <div class="step"><b><i>3</i>Check a frame</b><span>Press Compare (2) to see before and after. Adjust padding or the text zone if something remains.</span></div>
+     <div class="step"><b><i>4</i>Remove captions</b><span>Press the gold button (⌘E). Set In and Out (I, O) to do only part of the clip.</span></div>
+    </div>
+    <div class="h5">Shortcuts</div>
+    <div class="keys">
+     <div>Play / pause<kbd>Space</kbd></div><div>Frame back / fwd<kbd>← →</kbd></div><div>10 frames<kbd>⇧ ← →</kbd></div>
+     <div>Select<kbd>V</kbd></div><div>Area tool<kbd>A</kbd></div><div>Text zone<kbd>Z</kbd></div>
+     <div>Set In / Out<kbd>I  O</kbd></div><div>Before / after views<kbd>1 2 3</kbd></div><div>Delete area<kbd>⌫</kbd></div>
+     <div>Open video<kbd>⌘O</kbd></div><div>Remove captions<kbd>⌘E</kbd></div><div>Settings<kbd>⌘,</kbd></div>
+    </div>
+    <div class="h5" style="margin-top:14px">Tips</div>
+    <div class="note" style="margin-top:0;color:var(--tx2)">Real text in the scene (signs, shirts, labels) getting removed? Draw a Text zone over where the captions sit. Leftover outlines? Raise Edge padding. Missed faint text? Raise Sensitivity.</div>
+   </section>
+
+   <section class="ptab" data-p="about">
+    <div class="about"><div class="ai"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M6 20h7M16 20h2"/></svg></div>
+     <div><h2>Caption Remover</h2><p>Removes burned-in captions, subtitles and graphics from video, entirely on this computer.</p></div></div>
+    <dl class="kv"><dt>Version</dt><dd id="aVer">—</dd><dt>Processing on</dt><dd id="aDev">—</dd><dt>Made by</dt><dd>The Tru Studio · <span class="lnk" id="aSite">thetrustudio.com</span></dd>
+     <dt>Troubleshooting</dt><dd><span class="lnk" id="aLog">Show log file</span> · <span class="lnk" id="aData">Show app data folder</span></dd></dl>
+    <div class="credits">Built with open-source software: LaMa inpainting model (Apache 2.0), EasyOCR / CRAFT text detection (Apache 2.0), PyTorch (BSD), OpenCV (Apache 2.0), FFmpeg (LGPL/GPL). © 2026 The Tru Studio.</div>
+   </section>
+  </div>
+ </div>
+</div>
 <div id="dropov"><div>Drop to open</div></div>
 <div id="toast"></div>
 <div id="upd">
@@ -234,6 +351,7 @@ const $=id=>document.getElementById(id);
 const S={vid:null,info:null,name:'',regions:[],zone:null,scan:[],scanN:16,tool:'select',view:'original',mode:'quality',fmt:'mp4',
   inT:null,outT:null,sel:-1,t:0,useImg:false,job:null,jobState:null,thumbs:null,preview:null,split:.5,drag:null,tdrag:null};
 const SYS={native:false,folder:'Finder',output_dir:'',version:''};
+const PREF={precise:true,temporal:true,stabilise:true,detect_every:3,auto_update:true,default_mode:'quality',default_fmt:'mp4',output_dir:''};
 
 /* ================= helpers ================= */
 const fmtT=(t,full)=>{ if(t==null||isNaN(t)) return '--:--'; t=Math.max(0,t); const m=Math.floor(t/60), s=t-m*60;
@@ -280,7 +398,7 @@ $('updGo').onclick=async()=>{
     else { $('updE').textContent=st.error||'Update failed'; b.disabled=false; b.textContent='Try again'; } };
   tick();
 };
-setTimeout(()=>checkUpdate(false),2500);
+setTimeout(()=>{ if(PREF.auto_update!==false) checkUpdate(false); },2500);
 
 /* ================= open video ================= */
 $('browse').onclick=e=>{ e.stopPropagation(); $('file').click(); };
@@ -435,8 +553,9 @@ function setView(v){ if(!S.vid) return; S.view=v; setSeg('views',v);
   applySplit(); drawOV(); }
 function settings(){
   const off=S.inT||0;
-  return {auto_text:$('auto').checked,zone:S.zone,mode:S.mode,padding:+$('pad').value,sensitivity:+$('sens').value,stabilise:$('stab').checked,fmt:S.fmt,
-    start:S.inT,end:S.outT,detect_every:3,
+  return {auto_text:$('auto').checked,zone:S.zone,mode:S.mode,padding:+$('pad').value,sensitivity:+$('sens').value,
+    stabilise:PREF.stabilise,precise:PREF.precise,temporal:PREF.temporal,fmt:S.fmt,
+    start:S.inT,end:S.outT,detect_every:+PREF.detect_every||3,
     regions:S.regions.map(g=>({box:g.box,start:g.start==null?null:Math.max(0,g.start-off),end:g.end==null?null:Math.max(0,g.end-off)}))};
 }
 function previewSettings(){ const s=settings(); s.regions=S.regions.map(g=>({box:g.box,start:g.start,end:g.end})); delete s.start; delete s.end; return s; }
@@ -578,7 +697,7 @@ $('bOut').onclick=()=>{ const t=+curT().toFixed(3); S.outT=t<dur()-0.001?t:null;
 $('bClr').onclick=()=>{ S.inT=S.outT=null; updateNotes(); drawTL(); };
 
 /* ================= export ================= */
-const EXPORT_IC='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 4v11M7 10l5 5 5-5"/><path d="M5 20h14"/></svg>Export';
+const EXPORT_IC='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M4 20L15 9"/><path d="M14 4v3M12.5 5.5h3M19 9v3M17.5 10.5h3M19 3l.01 0"/></svg>Remove captions';
 function sheet(html){ $('card').innerHTML=html; $('sheet').style.display='flex'; }
 function closeSheet(){ $('sheet').style.display='none'; }
 $('exportBtn').onclick=()=>{ if(isExporting()) $('sheet').style.display='flex'; else openExport(); };
@@ -588,22 +707,22 @@ function openExport(){
   V.pause(); const base=S.name.replace(/\.[^.]+$/,''), ext=S.fmt==='prores'?'.mov':'.mp4';
   const range=(S.inT==null&&S.outT==null)?`Whole clip · ${fmtT(dur(),true)}`:`${fmtT(S.inT??0,true)} – ${fmtT(S.outT??dur(),true)}`;
   const what=[$('auto').checked?'Text'+(S.zone?' (in zone)':''):null, S.regions.length?`${S.regions.length} area${S.regions.length>1?'s':''}`:null].filter(Boolean).join(' + ');
-  sheet(`<h3>Export</h3><dl class="sum">
+  sheet(`<h3>Remove captions</h3><dl class="sum">
     <dt>File</dt><dd title="${esc(base)}_clean${ext}">${esc(base)}_clean${ext}</dd>
     <dt>Removes</dt><dd>${what}</dd>
     <dt>Range</dt><dd>${range}</dd>
-    <dt>Fill</dt><dd>${S.mode==='quality'?'Quality (AI)':'Fast'}${$('stab').checked?' · steady':''}</dd>
+    <dt>Fill</dt><dd>${S.mode==='quality'?'Quality (AI)':'Fast'}${PREF.temporal?' · uses nearby frames':''}</dd>
     <dt>Format</dt><dd>${S.fmt==='prores'?'ProRes 422 HQ':'MP4 · H.264'} · original audio</dd>
     <dt>Saves to</dt><dd>${esc(folderName())}</dd></dl>
-    <div class="acts"><button class="btn ghost" id="xCancel">Cancel</button><button class="btn gold" id="xGo">Start export</button></div>`);
+    <div class="acts"><button class="btn ghost" id="xCancel">Cancel</button><button class="btn gold" id="xGo">Start</button></div>`);
   $('xCancel').onclick=closeSheet; $('xGo').onclick=startExport; $('xGo').focus();
 }
 async function startExport(){
   try{ const d=await (await api('/api/process/'+S.vid,{settings:settings()})).json(); S.job=d.job; S.jobState='queued';
     sheet(`<h3><i class="spin"></i><span id="pS">Starting…</span></h3><div class="pbar"><i id="pB"></i></div>
       <div class="prow"><span id="pP">0%</span><span id="pE"></span></div>
-      <div class="acts"><button class="btn ghost" id="pHide" title="Keep working while it exports">Hide</button><button class="btn" id="pC">Cancel export</button></div>`);
-    $('pC').onclick=()=>api('/api/cancel/'+S.job,{}); $('pHide').onclick=()=>{ closeSheet(); toast('Export continues. Click the progress button to check on it.'); }; poll(); }
+      <div class="acts"><button class="btn ghost" id="pHide" title="Keep working while it runs">Hide</button><button class="btn" id="pC">Cancel</button></div>`);
+    $('pC').onclick=()=>api('/api/cancel/'+S.job,{}); $('pHide').onclick=()=>{ closeSheet(); toast('Still working. Click the progress button to check on it.'); }; poll(); }
   catch(e){ toast(e.message); }
 }
 async function poll(){
@@ -615,12 +734,12 @@ async function poll(){
   if(run){ setTimeout(poll,800); return; }
   $('exportBtn').innerHTML=EXPORT_IC;
   if(d.state==='done'){
-    sheet(`<h3><i class="ok"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg></i>Export finished</h3>
+    sheet(`<h3><i class="ok"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-10"/></svg></i>Captions removed</h3>
       <dl class="sum"><dt>File</dt><dd title="${esc(d.output)}">${esc(d.filename)}</dd><dt>Saved in</dt><dd>${esc(folderName())}</dd></dl>
       <div class="acts"><button class="btn ghost" id="dDone">Done</button><button class="btn" id="dRev">Show in ${SYS.folder}</button>${SYS.native?'<button class="btn gold" id="dPlay">Play</button>':`<a class="btn gold" href="/api/download/${S.job}" style="text-decoration:none">Download</a>`}</div>`);
     $('dDone').onclick=closeSheet; $('dRev').onclick=()=>api('/api/reveal/'+S.job,{}); if($('dPlay')) $('dPlay').onclick=()=>api('/api/open/'+S.job,{});
-  } else if(d.state==='cancelled'){ closeSheet(); toast('Export cancelled'); }
-  else { sheet(`<h3>Export failed</h3><div class="err">${esc(d.error||'Unknown error')}</div><div class="acts"><button class="btn" id="eC">Close</button></div>`); $('eC').onclick=closeSheet; }
+  } else if(d.state==='cancelled'){ closeSheet(); toast('Cancelled'); }
+  else { sheet(`<h3>Something went wrong</h3><div class="err">${esc(d.error||'Unknown error')}</div><div class="acts"><button class="btn" id="eC">Close</button></div>`); $('eC').onclick=closeSheet; }
 }
 
 /* ================= keyboard ================= */
@@ -632,7 +751,7 @@ document.addEventListener('keydown',e=>{
   if(k==='Escape'){ if($('sheet').style.display==='flex'){ if(!isExporting()||!$('pS')) closeSheet(); else closeSheet(); }
     else if(S.sel>=0){ S.sel=-1; renderInspector(); drawOV(); drawTL(); } else setTool('select'); return; }
   if(k==='Enter' && $('xGo') && $('sheet').style.display==='flex'){ e.preventDefault(); $('xGo').click(); return; }
-  if(!S.info || mod || $('sheet').style.display==='flex') return;
+  if(!S.info || mod || $('sheet').style.display==='flex' || $('prefs').style.display==='flex') return;
   if(k===' '){ e.preventDefault(); togglePlay(); }
   else if(k==='ArrowLeft'){ e.preventDefault(); setT(curT()-(e.shiftKey?10:1)/fps()); }
   else if(k==='ArrowRight'){ e.preventDefault(); setT(curT()+(e.shiftKey?10:1)/fps()); }
@@ -642,6 +761,52 @@ document.addEventListener('keydown',e=>{
   else if(k==='1') setView('original'); else if(k==='2') setView('compare'); else if(k==='3') setView('result');
   else if((k==='Backspace'||k==='Delete')&&S.sel>=0){ e.preventDefault(); areaAct('d'); }
 });
+
+/* ================= settings & help ================= */
+const PTITLE={general:'General',removal:'Removal',updates:'Updates',help:'Help',about:'About'};
+async function loadPrefs(){ try{ Object.assign(PREF,await (await api('/api/settings')).json()); }catch(e){} applyPrefs(); }
+function applyPrefs(){
+  $('pOut').textContent=PREF.output_dir; $('pOut').title=PREF.output_dir;
+  setSeg('pMode',PREF.default_mode); setSeg('pFmt',PREF.default_fmt); setSeg('pEvery',String(PREF.detect_every));
+  $('pAuto').checked=PREF.auto_update!==false; $('pPrecise').checked=!!PREF.precise; $('pTemporal').checked=!!PREF.temporal; $('pStab').checked=!!PREF.stabilise;
+  $('smartNote').textContent=[PREF.precise?'Letter-shaped masks':'Box masks',PREF.temporal?'real background from nearby frames':null].filter(Boolean).join(' · ');
+  SYS.output_dir=PREF.output_dir; updateNotes();
+}
+async function savePref(k,v){ PREF[k]=v; try{ Object.assign(PREF,await (await api('/api/settings',{[k]:v})).json()); }catch(e){ toast(e.message); } applyPrefs(); invalidatePreview(); }
+function openPrefs(tab){ showTab(tab||'general'); $('prefs').style.display='flex'; loadPrefs(); if(tab==='updates') refreshUpdates(); }
+function closePrefs(){ $('prefs').style.display='none'; }
+function showTab(t){ document.querySelectorAll('.prail button[data-p]').forEach(b=>b.classList.toggle('on',b.dataset.p===t));
+  document.querySelectorAll('.ptab').forEach(x=>x.classList.toggle('on',x.dataset.p===t)); $('pTitle').textContent=PTITLE[t];
+  if(t==='updates') refreshUpdates(); if(t==='about'){ $('aVer').textContent='v'+SYS.version+(SYS.dev?' (dev mode)':''); $('aDev').textContent={mps:'Apple GPU (Metal)',cuda:'NVIDIA GPU (CUDA)',cpu:'CPU'}[SYS.device]||SYS.device||'—'; } }
+document.querySelectorAll('.prail button[data-p]').forEach(b=>b.onclick=()=>showTab(b.dataset.p));
+$('setBtn').onclick=()=>openPrefs('general'); $('helpBtn').onclick=()=>openPrefs('help'); $('pClose').onclick=closePrefs;
+$('prefs').addEventListener('pointerdown',e=>{ if(e.target.id==='prefs') closePrefs(); });
+seg('pMode',v=>savePref('default_mode',v)); seg('pFmt',v=>savePref('default_fmt',v)); seg('pEvery',v=>savePref('detect_every',+v));
+$('pAuto').onchange=e=>savePref('auto_update',e.target.checked); $('pPrecise').onchange=e=>savePref('precise',e.target.checked);
+$('pTemporal').onchange=e=>savePref('temporal',e.target.checked); $('pStab').onchange=e=>savePref('stabilise',e.target.checked);
+$('pReset').onclick=async()=>{ for(const [k,v] of Object.entries({precise:true,temporal:true,stabilise:true,detect_every:3})) await savePref(k,v); toast('Recommended removal settings restored'); };
+$('pOutShow').onclick=()=>api('/api/open_folder',{what:'output'}).catch(e=>toast(e.message));
+$('pOutChange').onclick=async()=>{ if(!SYS.native) return toast('Changing the folder works in the app window'); try{ const d=await (await api('/api/settings/choose_folder',{})).json(); if(!d.cancelled){ Object.assign(PREF,d); applyPrefs(); toast('Cleaned videos will save to '+folderName()); } }catch(e){ toast(e.message); } };
+$('aLog').onclick=()=>api('/api/open_folder',{what:'log'}).catch(e=>toast(e.message));
+$('aData').onclick=()=>api('/api/open_folder',{what:'data'}).catch(e=>toast(e.message));
+$('aSite').onclick=()=>window.open('https://www.thetrustudio.com/','_blank');
+async function refreshUpdates(){
+  $('uCur').textContent='v'+(SYS.version||'—'); $('uStatus').textContent='Checking…'; $('uNotes').textContent=''; $('uInstall').style.display='none';
+  try{ const d=await (await api('/api/update/check')).json();
+    if(d.enabled===false){ $('uStatus').textContent='Updates are off in this copy (dev mode).'; return; }
+    if(d.error){ $('uStatus').textContent='Couldn’t reach the update server. Check your connection.'; return; }
+    if(d.available){ $('uStatus').innerHTML=`<span style="color:var(--gold2)">Version ${esc(d.version)} is available</span>`; $('uNotes').textContent=d.notes||''; $('uInstall').style.display='inline-flex'; }
+    else $('uStatus').textContent='You’re on the latest version.'; }
+  catch(e){ $('uStatus').textContent='Couldn’t check for updates.'; }
+}
+$('uCheck').onclick=refreshUpdates;
+$('uInstall').onclick=()=>{ closePrefs(); checkUpdate(true).then(()=>{ if($('upd').style.display==='block') $('updGo').click(); }); };
+document.addEventListener('keydown',e=>{ if((e.metaKey||e.ctrlKey)&&e.key===','){ e.preventDefault(); openPrefs('general'); }
+  else if(e.key==='?' && e.target.tagName!=='INPUT'){ openPrefs('help'); }
+  else if(e.key==='Escape' && $('prefs').style.display==='flex'){ e.stopImmediatePropagation(); closePrefs(); } },true);
+loadPrefs().then(()=>{ S.mode=PREF.default_mode; setSeg('mode',S.mode); S.fmt=PREF.default_fmt; setSeg('fmt',S.fmt);
+  $('modeNote').textContent=S.mode==='fast'?'Quick smudge fill for drafts and checks.':'AI fill that rebuilds texture. Use for delivery.'; updateNotes(); });
+fetch('/api/system').then(r=>r.json()).then(d=>{ $('pVer').textContent='v'+d.version; });
 renderInspector(); layout(); sizeTL();
 </script>
 </body>

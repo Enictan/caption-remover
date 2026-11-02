@@ -14,16 +14,14 @@ Everything it downloads lives in `~/Library/Application Support/Caption Remover`
 If something goes wrong, the log is at `~/Library/Logs/Caption Remover.log`.
 
 ## Using it
-- **Drop a video** (or click *Choose video*). It scans the clip and shows faint amber boxes where it found text.
-- **Find & remove text** (on by default) catches subtitles, word-by-word social captions and titles automatically, on every frame.
-- **Remove area:** drag a box over anything else, like logos, lower-third bars, stickers or emojis. Use *Starts here / Ends here* to limit a box to part of the clip. Drag a box to move it; Delete removes the selected one.
-- **Text zone:** draw a zone so auto-removal only looks there (e.g. the bottom third). This leaves real text in the scene, like signs, shirts and product labels, untouched.
-- **Preview result** renders the current frame so you can check before committing.
-- **Fast** is a quick smudge fill for drafts. **Quality** is the AI fill (LaMa) for delivery.
-- **Steady fill** reuses the patch on still shots so it doesn't flicker.
-- **Export** as MP4 (H.264) or ProRes 422 HQ (.mov) for Premiere, with the original audio kept. Set in/out to process only part of a clip.
+- **Open a video:** drop it on the window, click *Choose video*, or press ⌘O. Text is found automatically and shown in amber on the video and the timeline.
+- **Area tool (A):** drag a box over anything else, like logos, lower thirds or stickers. Drag its ends on the timeline to set when it applies.
+- **Text zone (Z):** limits automatic removal to one part of the frame, so real text in the scene (signs, labels) is left alone.
+- **Compare (2):** before/after split on the current frame. **Result (3)** shows just the cleaned frame.
+- **Remove captions (⌘E):** the gold button. Set In/Out (I, O) to process only part of the clip.
+- **Settings & Help:** the ⚙ and ? icons in the toolbar. There you'll find the output folder, defaults, removal options, updates, a quick guide, shortcuts and app info.
 
-Finished files save to **Movies › Caption Remover**.
+Finished files save to **Movies › Caption Remover** (changeable in Settings).
 
 ## Tips
 - Big captions over busy, fast-moving shots are the hardest case. Check those spots, and patch in Premiere if needed.

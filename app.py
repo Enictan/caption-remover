@@ -28,13 +28,63 @@ import engine
 import updater
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-VERSION = "1.0.4"
+VERSION = "1.1.0"
 NATIVE = False  # set when running inside the native window
 _home = os.path.expanduser("~")
 _vids = "Movies" if sys.platform == "darwin" else "Videos"
-WORK = os.environ.get("CR_OUTPUT") or os.path.join(_home, _vids, "Caption Remover")
-JOBS_DIR = os.path.join(WORK, ".work")
+DEFAULT_OUT = os.environ.get("CR_OUTPUT") or os.path.join(_home, _vids, "Caption Remover")
+SUPPORT = os.environ.get("CR_SUPPORT") or os.path.join(_home, ".caption-remover")
+SETTINGS_FILE = os.path.join(SUPPORT, "settings.json")
+LOG_FILE = os.path.join(_home, "Library", "Logs", "Caption Remover.log") if sys.platform == "darwin" else None
+JOBS_DIR = os.path.join(DEFAULT_OUT, ".work")
 os.makedirs(JOBS_DIR, exist_ok=True)
+WINDOW = None   # native window (for folder picker)
+
+DEFAULT_SETTINGS = {
+    "output_dir": DEFAULT_OUT,
+    "default_mode": "quality",      # fast | quality
+    "default_fmt": "mp4",           # mp4 | prores
+    "auto_update": True,
+    "precise": True,                # letter-shaped masks + caption plates
+    "temporal": True,               # borrow background from nearby frames
+    "stabilise": True,
+    "detect_every": 3,
+}
+
+
+def load_settings():
+    import json
+    st = dict(DEFAULT_SETTINGS)
+    try:
+        with open(SETTINGS_FILE, encoding="utf-8") as f:
+            st.update({k: v for k, v in json.load(f).items() if k in DEFAULT_SETTINGS})
+    except Exception:
+        pass
+    if not st.get("output_dir"):
+        st["output_dir"] = DEFAULT_OUT
+    return st
+
+
+def save_settings(st):
+    import json
+    os.makedirs(SUPPORT, exist_ok=True)
+    tmp = SETTINGS_FILE + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(st, f, indent=2)
+    os.replace(tmp, SETTINGS_FILE)
+
+
+def out_dir():
+    d = load_settings()["output_dir"]
+    try:
+        os.makedirs(d, exist_ok=True)
+        return d
+    except OSError:
+        os.makedirs(DEFAULT_OUT, exist_ok=True)
+        return DEFAULT_OUT
+
+
+WORK = DEFAULT_OUT   # kept for older code paths
 
 app = FastAPI(title="Caption Remover")
 videos: dict[str, dict] = {}   # id -> {"path", "info", "name"}
@@ -147,6 +197,7 @@ def process(vid: str, body: dict):
     s = engine.Settings.from_dict(body.get("settings", {}))
     base = os.path.splitext(os.path.basename(v["name"]))[0]
     ext = ".mov" if s.fmt == "prores" else ".mp4"
+    WORK = out_dir()
     out = os.path.join(WORK, f"{base}_clean{ext}")
     k = 2
     while os.path.exists(out):
@@ -217,7 +268,7 @@ def open_output(jid: str):
 
 @app.get("/api/system")
 def system():
-    return {"device": engine.device(), "output_dir": WORK, "native": NATIVE, "version": VERSION,
+    return {"device": engine.device(), "output_dir": out_dir(), "native": NATIVE, "version": VERSION,
             "dev": bool(os.environ.get("CR_DEV")),
             "platform": sys.platform, "folder": "Finder" if sys.platform == "darwin" else "Explorer"}
 
@@ -249,6 +300,50 @@ def update_restart():
         if j.state in ("queued", "running"):
             raise HTTPException(409, "A video is still processing. Restart when it's finished.")
     threading.Timer(0.4, updater.restart).start()
+    return {"ok": True}
+
+
+@app.get("/api/settings")
+def get_settings():
+    return load_settings()
+
+
+@app.post("/api/settings")
+def set_settings(body: dict):
+    st = load_settings()
+    for k, v in body.items():
+        if k in DEFAULT_SETTINGS:
+            st[k] = v
+    if body.get("output_dir"):
+        try:
+            os.makedirs(st["output_dir"], exist_ok=True)
+        except OSError:
+            raise HTTPException(400, "That folder can't be used")
+    save_settings(st)
+    return st
+
+
+@app.post("/api/settings/choose_folder")
+def choose_folder():
+    if not (NATIVE and WINDOW):
+        raise HTTPException(400, "Folder picker is only available in the app window")
+    import webview
+    kind = getattr(getattr(webview, "FileDialog", None), "FOLDER", None) or getattr(webview, "FOLDER_DIALOG", 20)
+    res = WINDOW.create_file_dialog(kind, directory=load_settings()["output_dir"])
+    if not res:
+        return {"cancelled": True}
+    path = res[0] if isinstance(res, (list, tuple)) else res
+    st = load_settings(); st["output_dir"] = path; save_settings(st)
+    return st
+
+
+@app.post("/api/open_folder")
+def open_folder(body: dict):
+    what = body.get("what")
+    path = {"output": out_dir(), "data": SUPPORT, "log": LOG_FILE}.get(what)
+    if not path or not os.path.exists(path):
+        raise HTTPException(404, "Not available on this computer")
+    _open(path, reveal=(what == "log"))
     return {"ok": True}
 
 
@@ -323,7 +418,7 @@ def main():
 
     if webview is None:
         threading.Timer(1.5, lambda: webbrowser.open(url)).start()
-        print(f"\n  Caption Remover running at {url}\n  Outputs save to: {WORK}\n  Close this window to stop.\n")
+        print(f"\n  Caption Remover running at {url}\n  Outputs save to: {out_dir()}\n  Close this window to stop.\n")
         server.run()
         return
 
@@ -339,7 +434,8 @@ def main():
         webview.settings["ALLOW_DOWNLOADS"] = True
     except Exception:
         pass
-    webview.create_window("Caption Remover", url, width=1440, height=900, min_size=(1100, 700),
+    global WINDOW
+    WINDOW = webview.create_window("Caption Remover", url, width=1440, height=900, min_size=(1100, 700),
                           background_color="#0e0e10")
     if sys.platform == "darwin":
         _mac_icon()  # must run on the main thread, before the event loop starts
