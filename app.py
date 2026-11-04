@@ -30,7 +30,7 @@ import updater
 import voice
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-VERSION = "1.8.0"
+VERSION = "1.9.0"
 NATIVE = False  # set when running inside the native window
 _home = os.path.expanduser("~")
 _vids = "Movies" if sys.platform == "darwin" else "Videos"
@@ -820,7 +820,10 @@ async def link_ack(request: Request):
     import json
     _link_auth(request)
     body = json.loads((await request.body()) or b"{}")
-    LINK["results"][body.get("id")] = dict(body.get("result") or {}, at=time.time())
+    res = body.get("result") or {}
+    LINK["results"][body.get("id")] = dict(res, at=time.time())
+    if res.get("anchor") is not None and res.get("seq"):
+        MIX["anchor"][res["seq"]] = res["anchor"]
     return _link_json({"ok": True})
 
 
@@ -940,6 +943,146 @@ def link_send(body: dict):
     aid = uuid.uuid4().hex[:8]
     LINK["queue"].append({"id": aid, "label": label, "path": path, "dur": dur, "insert": True, "markers": markers})
     return {"id": aid, "label": label, "path": path, "markers": len(markers), "connected": time.time() - LINK["seen"] < 3.5}
+
+
+# ---- Live mix sync: every stem you keep on the decks becomes its own track in Premiere, kept up to date
+MIX = {"lanes": {}, "pending": None, "running": False, "state": "idle", "message": "", "anchor": {}, "sent_at": 0.0,
+       "applied": None, "lock": threading.Lock()}
+MIX_CACHE = os.path.join(MUSIC_DIR, "mixcache")
+
+
+def _mix_stretched(src, semis, ratio, sr=48000):
+    """The stem (or song) with key + tempo applied, at video sample rate, cached - so a volume change never re-stretches."""
+    import hashlib
+    import soundfile as sf
+    import music
+    key = hashlib.sha1(f"{src}|{os.path.getmtime(src)}|{semis:.3f}|{ratio:.5f}|{sr}".encode()).hexdigest()[:16]
+    os.makedirs(MIX_CACHE, exist_ok=True)
+    p = os.path.join(MIX_CACHE, key + ".wav")
+    if not os.path.exists(p):
+        tmp = os.path.join(MIX_CACHE, key + ".tmp.wav")
+        music.render(src, tmp, 0, None, semis, ratio, fade=False)
+        a, in_sr = sf.read(tmp, dtype="float32", always_2d=True)
+        os.remove(tmp)
+        if in_sr != sr:
+            import soxr
+            a = soxr.resample(a, in_sr, sr, quality="VHQ")
+        sf.write(p + ".part.wav", a, sr, subtype="FLOAT")
+        os.replace(p + ".part.wav", p)
+    return p
+
+
+def _mix_out(label, cached, gain, sr=48000):
+    """A new versioned file for Premiere (new name = Premiere reloads it)."""
+    import soundfile as sf
+    a, _ = sf.read(cached, dtype="float32", always_2d=True)
+    if abs(gain - 1) > 1e-4:
+        a = a * gain
+    d = os.path.join(out_dir(), "Music", "Premiere")
+    os.makedirs(d, exist_ok=True)
+    safe = "".join(ch for ch in label if ch not in '\\/:*?"<>|').strip() or "stem"
+    old = sorted((f for f in os.listdir(d) if f.startswith(safe + " v") and f.endswith(".wav")),
+                 key=lambda f: int(f[len(safe) + 2:-4]) if f[len(safe) + 2:-4].isdigit() else 0)
+    ver = 1 + max([int(f[len(safe) + 2:-4]) for f in old if f[len(safe) + 2:-4].isdigit()] or [0])
+    dst = os.path.join(d, f"{safe} v{ver}.wav")
+    sf.write(dst, np.clip(a, -1, 1), sr, subtype="PCM_24")
+    for f in old[:-2]:
+        try:
+            os.remove(os.path.join(d, f))
+        except OSError:
+            pass
+    return dst, len(a) / sr
+
+
+def _mix_run(st):
+    """Bring Premiere in line with the studio: render what changed, then queue one action with the whole mix."""
+    lanes_out, want = [], {}
+    total = sum(1 for ln in st.get("lanes", []) if ln.get("on"))
+    done = 0
+    for ln in st.get("lanes", []):
+        t = tracks.get(ln.get("id"))
+        if not t or not ln.get("on"):
+            continue
+        stem = ln.get("stem") or "mix"
+        src = t["path"] if stem == "mix" else (t.get("stems") or {}).get(stem)
+        if not src or not os.path.exists(src):
+            continue
+        name = STEM_LABELS.get(stem, stem.title())
+        label = f"Tru · {t['name']} · {name}"
+        semis, ratio, gain = float(ln.get("semis", 0)), float(ln.get("ratio", 1)), float(ln.get("gain", 1))
+        sig = f"{src}|{semis:.3f}|{ratio:.5f}|{gain:.4f}"
+        prev = MIX["lanes"].get(label)
+        MIX["message"] = f"Rendering {name} ({done + 1} of {total})…"
+        if prev and prev["sig"] == sig and os.path.exists(prev["path"]):
+            path, dur, changed = prev["path"], prev["dur"], False
+        else:
+            path, dur = _mix_out(label, _mix_stretched(src, semis, ratio), gain)
+            changed = True
+        done += 1
+        want[label] = {"sig": sig, "path": path, "dur": dur}
+        lanes_out.append({"label": label, "path": path if changed else None, "media": path, "dur": round(dur, 4),
+                          "off": round(float(ln.get("off", 0)), 4), "deck": ln.get("deck"), "stem": stem})
+    for label in MIX["lanes"]:
+        if label not in want:
+            lanes_out.append({"label": label, "remove": True})
+    MIX["lanes"] = want
+    aid = uuid.uuid4().hex[:8]
+    seq = (LINK.get("seq") or {}).get("id")
+    LINK["queue"] = [a for a in LINK["queue"] if a.get("kind") != "mix"]          # only the newest mix matters
+    LINK["queue"].append({"id": aid, "kind": "mix", "label": "Mix", "lanes": lanes_out, "markers": st.get("markers") or [],
+                          "anchor": MIX["anchor"].get(seq) if seq else None})
+    MIX.update(sent_at=time.time(), sent_id=aid)
+    return aid
+
+
+def _mix_worker():
+    while True:
+        with MIX["lock"]:
+            st, MIX["pending"] = MIX["pending"], None
+            if st is None:
+                MIX["running"] = False
+                return
+        try:
+            MIX.update(state="rendering")
+            _mix_run(st)
+            MIX.update(state="sent", message="Sent to Premiere" if time.time() - LINK["seen"] < 3.5 else "Waiting for the Premiere panel…")
+        except Exception as e:  # noqa
+            MIX.update(state="error", message=f"Couldn't render the mix: {e}")
+
+
+STEM_LABELS = {"vocals": "Vocals", "drums": "Drums", "bass": "Bass", "other": "Other", "guitar": "Guitar", "piano": "Piano", "mix": "Full song"}
+
+
+@app.post("/api/mixsync")
+def mix_sync(body: dict):
+    with MIX["lock"]:
+        MIX["pending"] = body
+        if MIX["running"]:
+            return {"queued": True}
+        MIX["running"] = True
+    threading.Thread(target=_mix_worker, daemon=True).start()
+    return {"queued": True}
+
+
+@app.get("/api/mixsync/status")
+def mix_status():
+    sid = MIX.get("sent_id")
+    res = LINK["results"].get(sid) if sid else None
+    state = MIX["state"]
+    if state == "sent" and res:
+        state = "applied" if res.get("ok") else "error"
+    return {"state": "rendering" if MIX["running"] else state, "message": MIX["message"], "result": res,
+            "lanes": {k: {"dur": v["dur"]} for k, v in MIX["lanes"].items()}, "connected": time.time() - LINK["seen"] < 3.5,
+            "seq": LINK.get("seq")}
+
+
+@app.post("/api/mixsync/reset")
+def mix_reset():
+    """Forget where the mix sits in the sequence: the next sync places it at the playhead again."""
+    seq = (LINK.get("seq") or {}).get("id")
+    if seq:
+        MIX["anchor"].pop(seq, None)
+    return {"ok": True}
 
 
 @app.get("/favicon.ico")

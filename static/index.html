@@ -332,7 +332,7 @@ kbd{font:500 10px Inter;color:var(--tx3);border:1px solid var(--line2);border-ra
 #mxPr{display:none;align-items:center;gap:6px;flex:none;font-weight:600;color:#c9a8ff;margin-right:8px;height:26px}
 #app.music #mxPr{display:flex}
 #mxPr .prdot{width:7px;height:7px;border-radius:50%;background:#555}
-#mxPr.on .prdot{background:#41c48a}
+#mxPr.conn .prdot{background:#41c48a}
 #prMenu{position:fixed;z-index:80;display:none;background:var(--p1);border:1px solid var(--line2);border-radius:10px;box-shadow:0 14px 34px rgba(0,0,0,.55);padding:12px;width:330px;flex-direction:column;gap:9px}
 #prMenu .prh{display:flex;justify-content:space-between;align-items:center;gap:8px} #prMenu .prh span{font-size:11.5px;color:var(--tx2);white-space:nowrap}
 #prMenu .prh span.prok{color:var(--green)}
@@ -343,6 +343,38 @@ kbd{font:500 10px Inter;color:var(--tx3);border:1px solid var(--line2);border-ra
 #prMenu .prnote{font-size:11.5px;color:var(--tx2);line-height:1.45}
 #prMenu .prnote b{color:var(--tx)}
 #prMenu .prfoot{display:flex;justify-content:flex-end;border-top:1px solid var(--line);padding-top:8px}
+.crtabs{display:flex;gap:2px}
+.crtabs button{height:24px;padding:0 9px;border-radius:6px;font-size:10.5px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--tx3);display:flex;align-items:center;gap:6px}
+.crtabs button.on{background:var(--p3);color:var(--tx)}
+.crtabs #crCount{letter-spacing:0;text-transform:none;font-weight:500;color:var(--tx3)}
+#mxsDot{width:7px;height:7px;border-radius:50%;background:#444;display:inline-block}
+#mxsDot.live{background:#c9a8ff} #mxsDot.ok{background:var(--green)} #mxsDot.busy{background:var(--amber)} #mxsDot.err{background:var(--red)}
+#mixPane{display:none;flex:1;min-height:0;flex-direction:column;padding:10px;gap:9px;overflow:hidden}
+#crate.mix #mixPane{display:flex} #crate.mix #crateRows,#crate.mix .cpager,#crate.mix #crAdd{display:none}
+.mxs-top{display:flex;flex-direction:column;gap:4px}
+.mxs-live{display:flex;align-items:center;gap:7px;font-weight:600;font-size:12px;cursor:pointer}
+#mxsConn{font-size:11px;color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#mxsLanes{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:8px}
+.mxg{display:flex;flex-direction:column;gap:3px}
+.mxg-h{display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;white-space:nowrap;overflow:hidden}
+.mxg-h .b{width:16px;height:16px;border-radius:4px;display:grid;place-items:center;font-size:10px;font-weight:700;flex:none}
+.mxg-h .nm{overflow:hidden;text-overflow:ellipsis;min-width:0}
+.mxg-h small{color:var(--tx3);font-weight:500;flex:none}
+.mxl{display:flex;align-items:center;gap:7px;height:24px;padding:0 6px;border-radius:6px;background:var(--p2);border:1px solid var(--line);cursor:pointer;font-size:11.5px}
+.mxl i{width:7px;height:7px;border-radius:2px;flex:none}
+.mxl .ln{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mxl .lg{color:var(--tx3);font-variant-numeric:tabular-nums;font-size:10.5px}
+.mxl .tg{width:26px;height:14px;border-radius:9px;background:#3a3a42;position:relative;flex:none;transition:background .12s}
+.mxl .tg::after{content:"";position:absolute;top:2px;left:2px;width:10px;height:10px;border-radius:50%;background:#bbb;transition:left .12s}
+.mxl.on .tg{background:var(--green)} .mxl.on .tg::after{left:14px;background:#fff}
+.mxl:not(.on) .ln{color:var(--tx3)}
+.mxs-hint{font-size:11px;color:var(--tx3);line-height:1.45}
+.mxs-align{display:flex;align-items:center;justify-content:space-between;gap:6px;border-top:1px solid var(--line);padding-top:8px}
+.mxs-align>div{display:flex;flex-direction:column;gap:2px;min-width:0} .mxs-align b{font-size:11.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mxs-foot{display:flex;flex-direction:column;gap:7px}
+#mxsStatus{font-size:11.5px;color:var(--tx2);min-height:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#mxsStatus.mxok{color:var(--green)} #mxsStatus.mxerr{color:var(--red)}
+.mxs-btns{display:flex;gap:6px;justify-content:flex-end}
 #keyMenu{position:fixed;z-index:80;display:none;background:var(--p1);border:1px solid var(--line2);border-radius:10px;box-shadow:0 14px 34px rgba(0,0,0,.55);padding:6px;width:240px}
 #keyMenu .t{font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--tx3);padding:4px 6px}
 #keyMenu button{display:flex;justify-content:space-between;width:100%;padding:6px 8px;border-radius:6px;color:var(--tx2)}
@@ -471,9 +503,15 @@ kbd{font:500 10px Inter;color:var(--tx3);border:1px solid var(--line2);border-ra
       <div id="kbKeys"></div>
     </div>
     <div id="crate">
-      <div class="mhead"><h4>Library <span id="crCount" style="letter-spacing:0;text-transform:none;font-weight:500"></span></h4><button class="btn sm" id="crAdd" title="Add songs (⌘O)">Add songs…</button></div>
+      <div class="mhead"><div class="crtabs"><button data-c="lib" class="on">Library <span id="crCount"></span></button><button data-c="mix" title="Your stems as Premiere tracks, kept in sync">Mix <i id="mxsDot"></i></button></div><button class="btn sm" id="crAdd" title="Add songs (⌘O)">Add songs…</button></div>
       <div id="crateRows"></div>
       <div class="cpager" id="crPager"></div>
+      <div id="mixPane">
+        <div class="mxs-top"><label class="mxs-live" title="Every change you make on the decks updates Premiere a few seconds later"><input type="checkbox" id="mxsLive"><span>Live sync to Premiere</span></label><span id="mxsConn"></span></div>
+        <div id="mxsLanes"></div>
+        <div class="mxs-align"><div><span class="lbl">Lined up</span><b id="mxsAlignT">—</b></div><button class="minib" id="mxsAlignSet" title="Line the two songs up the way the decks are right now (do this after you've beat-matched them)">Use decks now</button></div>
+        <div class="mxs-foot"><div id="mxsStatus">—</div><div class="mxs-btns"><button class="minib" id="mxsReset" title="Put the whole mix at Premiere's playhead again">At playhead</button><button class="btn sm gold" id="mxsSync">Sync now</button></div></div>
+      </div>
     </div>
   </section>
 </div>
@@ -1568,7 +1606,7 @@ fetch('/api/settings').then(r=>r.json()).then(st=>setQuant(st.quantize!==false))
 // ---------- Premiere Pro link
 const PR={st:null,mk:'bars',open:false,wait:{}};
 async function prPoll(){ try{ PR.st=await (await fetch('/api/link/status')).json(); }catch(e){ return; }
-  const st=PR.st; $('mxPr').classList.toggle('on',!!st.connected);
+  const st=PR.st; $('mxPr').classList.toggle('conn',!!st.connected);
   $('mxPr').title=st.connected?`Premiere Pro connected${st.seq?' · '+st.seq.name:''}`:'Premiere Pro link: send mixes and markers straight into your edit';
   for(const [id,label] of Object.entries(PR.wait)){ const r=st.results[id]; if(!r) continue; delete PR.wait[id];
     toast(r.ok?`Premiere: ${r.fresh?'added':'updated'} ${label}${r.placed?'':' (in the Tru Studio bin)'}${r.markers?` · ${r.markers} markers`:''}`:`Premiere: ${r.error}`); }
@@ -1595,11 +1633,80 @@ async function prSend(which){ const body={markers:PR.mk};
   catch(e){ toast('Send to Premiere: '+e.message); } finally{ b.textContent=txt; prRender(); } }
 $('mxPr').onclick=e=>{ e.stopPropagation(); prToggle(); };
 $('prMenu').addEventListener('click',e=>{ e.stopPropagation(); const s=e.target.closest('[data-send]'); if(s) return prSend(s.dataset.send);
-  const m=e.target.closest('#prMk button'); if(m){ PR.mk=m.dataset.v; api('/api/settings',{link_markers:PR.mk}).catch(()=>{}); prRender(); } });
+  const m=e.target.closest('#prMk button'); if(m){ PR.mk=m.dataset.v; api('/api/settings',{link_markers:PR.mk}).catch(()=>{}); prRender(); if(typeof mixChanged==='function') mixChanged(); } });
 $('prInstall').onclick=async e=>{ e.stopPropagation(); try{ const d=await (await api('/api/link/install',{})).json(); toast('Panel installed. Restart Premiere Pro, then open Window › Extensions › Tru Studio Link.'); prPoll(); }catch(err){ toast('Install failed: '+err.message); } };
 document.addEventListener('click',()=>{ if(PR.open) prToggle(false); });
 fetch('/api/settings').then(r=>r.json()).then(st=>{ PR.mk=st.link_markers||'bars'; }).catch(()=>{});
 setInterval(prPoll,1500); prPoll();
+
+// ---------- Mix: the stems you keep on the decks, as tracks in Premiere, kept in sync
+const MIXS={live:false,align:null,timer:null,lastSig:'',status:null,tab:'lib'};
+try{ MIXS.live=localStorage.getItem('mixLive')==='1'; MIXS.tab=localStorage.getItem('crTab')||'lib'; }catch(e){}
+function crTab(t){ MIXS.tab=t; try{ localStorage.setItem('crTab',t); }catch(e){} $('crate').classList.toggle('mix',t==='mix');
+  document.querySelectorAll('.crtabs button').forEach(b=>b.classList.toggle('on',b.dataset.c===t)); if(t==='mix') mixRender(); else renderLib(); }
+document.querySelector('.crtabs').addEventListener('click',e=>{ const b=e.target.closest('button[data-c]'); if(b) crTab(b.dataset.c); });
+function mixAlign(){ const A=DECKS.A, B=DECKS.B; if(!(A.t&&B.t)) return null;
+  return MIXS.align||{A:(A.t.beats||[0])[0]||0,B:(B.t.beats||[0])[0]||0,auto:true}; }
+function mixOffsets(){ const A=DECKS.A, B=DECKS.B, al=mixAlign(); const off={A:0,B:0};
+  if(al){ off.B=al.A/A.rate-al.B/B.rate; const m=Math.min(0,off.B); off.A-=m; off.B-=m; }
+  return off; }
+function mixLanes(){ const out=[], off=mixOffsets();
+  ['A','B'].forEach(k=>{ const D=DECKS[k]; if(!D.t) return;
+    if(D.mode==='stems'&&D.gainNodes){ const eff=D.effGains(); Object.keys(D.gainNodes).forEach(n=>out.push({deck:k,id:D.t.id,stem:n,on:eff[n]>0,gain:eff[n]>0?eff[n]:(D.gains[n]??1),semis:D.semis,ratio:D.rate,off:off[k]})); }
+    else out.push({deck:k,id:D.t.id,stem:'mix',on:!D.mixOff,gain:1,semis:D.semis,ratio:D.rate,off:off[k]}); });
+  return out; }
+function mixMarkers(){ const off=mixOffsets(), out=[]; const L=DECKS.A.t?DECKS.A:DECKS.B.t?DECKS.B:null; if(!L) return out;
+  const step={beats:1,bars:4,phrases:16}[PR.mk];
+  if(step){ const b=L.t.beats||[]; for(let i=0;i<b.length;i+=step){ const n=i/step+1; out.push({t:+(off[L.id]+b[i]/L.rate).toFixed(4),name:PR.mk==='beats'?'':PR.mk==='bars'?`Bar ${n}`:`Phrase ${n}`,color:PR.mk==='phrases'?3:5}); } }
+  const cols=[1,3,4,0,7,6,2,5];
+  ['A','B'].forEach(k=>{ const D=DECKS[k]; if(!D.t) return; (D.hot||[]).forEach((v,i)=>{ if(v!=null) out.push({t:+(off[k]+v/D.rate).toFixed(4),name:`${k} Cue ${i+1}`,color:cols[i]}); }); });
+  return out; }
+function mixState(){ return {lanes:mixLanes(),markers:mixMarkers()}; }
+function mixChanged(){ if(MIXS.tab==='mix') mixRender(); if(!MIXS.live) return; clearTimeout(MIXS.timer); MIXS.timer=setTimeout(()=>mixPush(false),1300); }
+async function mixPush(force){ const st=mixState(), sig=JSON.stringify(st);
+  if(!force&&sig===MIXS.lastSig) return;
+  if(!force&&!(PR.st&&PR.st.connected)) { mixRender(); return; }
+  MIXS.lastSig=sig; try{ await api('/api/mixsync',st); }catch(e){ toast('Mix sync: '+e.message); } mixPoll(); }
+async function mixPoll(){ try{ MIXS.status=await (await fetch('/api/mixsync/status')).json(); }catch(e){ return; }
+  const s=MIXS.status, dot=$('mxsDot'); dot.className=s.state==='rendering'?'busy':s.state==='error'?'err':s.state==='applied'&&MIXS.live?'ok':MIXS.live?'live':'';
+  if(MIXS.tab==='mix') mixStatusLine(); }
+function mixStatusLine(){ const s=MIXS.status||{}, el=$('mxsStatus'), conn=PR.st&&PR.st.connected; el.className='';
+  if(s.state==='rendering'){ el.textContent=s.message||'Rendering…'; return; }
+  if(s.state==='error'){ el.className='mxerr'; el.textContent=(s.result&&s.result.error)||s.message||'Something went wrong'; el.title=el.textContent; return; }
+  if(s.state==='applied'){ el.className='mxok'; el.textContent=`✓ In sync · ${s.result.placed} track${s.result.placed===1?'':'s'}${s.result.markers?` · ${s.result.markers} markers`:''}`; return; }
+  if(s.state==='sent'){ el.textContent=conn?'Sending to Premiere…':'Waiting for the Premiere panel…'; return; }
+  el.textContent=conn?(MIXS.live?'Live: changes go to Premiere automatically':'Press Sync now, or turn on Live sync'):'Open the Tru Studio Link panel in Premiere'; }
+const STEM_ORDER=['vocals','drums','bass','guitar','piano','other','mix'];
+function mixRender(){ if(MIXS.tab!=='mix') return; const lanes=mixLanes(), box=$('mxsLanes'), conn=PR.st&&PR.st.connected;
+  $('mxsLive').checked=MIXS.live;
+  $('mxsConn').textContent=conn?(PR.st.seq?`Premiere › ${PR.st.seq.name}`:'Premiere connected · open a sequence'):PR.st&&PR.st.installed?'Premiere panel not open':'Premiere panel not installed (Premiere button, top right)';
+  if(!lanes.length){ box.innerHTML=`<div class="mxs-hint"><b style="color:var(--tx)">Build a mix for your edit</b><br>Load songs into the decks and split their stems. Every stem you keep becomes its own audio track in Premiere, lined up, and updates when you change it here.</div>`; }
+  else box.innerHTML=['A','B'].map(k=>{ const D=DECKS[k]; if(!D.t) return ''; const ls=lanes.filter(l=>l.deck===k).sort((a,b)=>STEM_ORDER.indexOf(a.stem)-STEM_ORDER.indexOf(b.stem));
+    const kk=D.effKey(); return `<div class="mxg"><div class="mxg-h"><span class="b" style="background:${k==='A'?'#2a2312':'#14243a'};color:${k==='A'?'var(--gold2)':'#7cb6ff'}">${k}</span><span class="nm" title="${esc(D.t.name)}">${esc(D.t.name)}</span><small>${keyName(kk.tonic,kk.mode)} · ${D.bpm().toFixed(1)}</small></div>
+      ${ls.map(l=>`<div class="mxl ${l.on?'on':''}" data-d="${k}" data-s="${l.stem}" title="${l.on?'In the mix: goes to Premiere as its own track. Click to drop it':'Not in the mix. Click to add it'}"><i style="background:${STEM_COL[l.stem]||(k==='A'?'var(--gold)':'#4f8fe0')}"></i><span class="ln">${l.stem==='mix'?'Full song':(STEM_NAME[l.stem]||l.stem)}</span><span class="lg">${l.on?Math.round(l.gain*100)+'%':''}</span><span class="tg"></span></div>`).join('')}
+      ${D.mode!=='stems'?`<div class="mxs-hint">Split stems on Deck ${k} to send its parts as separate tracks.</div>`:''}</div>`; }).join('');
+  box.querySelectorAll('.mxl').forEach(el=>el.onclick=()=>mixToggle(el.dataset.d,el.dataset.s));
+  const al=mixAlign(); $('mxsAlignT').textContent=al?(al.auto?'First beats together':`A ${fmtS1(al.A)} ↔ B ${fmtS1(al.B)}`):'One deck only';
+  $('mxsAlignSet').disabled=!(DECKS.A.t&&DECKS.B.t); $('mxsSync').disabled=!lanes.length; $('mxsReset').disabled=!conn;
+  mixStatusLine(); }
+function mixToggle(k,n){ const D=DECKS[k]; if(!D.t) return;
+  if(n==='mix'){ D.mixOff=!D.mixOff; const g=D.partGains&&D.partGains.mix; if(g) g.gain.setTargetAtTime(D.mixOff?0:1,ac().currentTime,0.015); }
+  else { const on=D.effGains()[n]>0; if(Object.values(D.solo).some(Boolean)){ const eff=D.effGains(); D.solo={}; Object.keys(eff).forEach(x=>{ D.mute[x]=!(eff[x]>0); }); }
+    D.mute[n]=on; D.applyGains(); D.renderPads(); return; }
+  mixChanged(); }
+$('mxsLive').onchange=e=>{ MIXS.live=e.target.checked; try{ localStorage.setItem('mixLive',MIXS.live?'1':'0'); }catch(err){}
+  if(MIXS.live){ MIXS.lastSig=''; mixPush(false); toast('Live sync on: changes go to Premiere a few seconds after you make them'); } mixRender(); mixPoll(); };
+$('mxsSync').onclick=()=>{ if(!(PR.st&&PR.st.connected)) toast('Mix ready — it goes to Premiere when the Tru Studio Link panel is open'); mixPush(true); };
+$('mxsAlignSet').onclick=()=>{ MIXS.align={A:DECKS.A.pos(),B:DECKS.B.pos()}; toast('Mix lined up the way the decks are now'); mixChanged(); };
+$('mxsReset').onclick=async()=>{ await api('/api/mixsync/reset',{}); MIXS.lastSig=''; mixPush(true); };
+// any change on a deck -> the mix (debounced)
+['setSemis','setRate','applyGains','unload','load'].forEach(m=>{ const f=Deck.prototype[m]; Deck.prototype[m]=function(...a){ const r=f.apply(this,a); if(r&&r.then) r.then(()=>mixChanged()); else mixChanged(); return r; }; });
+{ const f=Deck.prototype.setSources; Deck.prototype.setSources=async function(...a){ const r=await f.apply(this,a); this.mixOff=false; mixChanged(); return r; }; }
+{ const f=Deck.prototype.saveMem; Deck.prototype.saveMem=function(...a){ f.apply(this,a); mixChanged(); }; }
+{ const f=alignBeats; alignBeats=function(...a){ const r=f.apply(this,a); if(DECKS.A.t&&DECKS.B.t){ MIXS.align={A:DECKS.A.pos(),B:DECKS.B.pos()}; mixChanged(); } return r; }; }
+{ const f=prRender; prRender=function(){ f(); }; }
+setInterval(()=>{ if(MIXS.live||MIXS.tab==='mix'){ mixPoll(); if(MIXS.tab==='mix') mixRender(); } },1500);
+crTab(MIXS.tab);
 
 // ---------- on-screen keyboard: check a key by ear
 let KB_LAST='';

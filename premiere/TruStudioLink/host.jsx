@@ -121,3 +121,106 @@ function crApply(a){
     return crJ({ok:true, fresh:fresh, placed: !!clip, markers: n, sequence: seq ? seq.name : null});
   }catch(e){ return crJ({ok:false, error:String(e) + (e.line ? ' (line ' + e.line + ')' : '')}); }
 }
+
+// ---- whole mix: one audio track per stem, kept in line with the studio
+function crClipOn(seq, item){
+  for(var t = 0; t < seq.audioTracks.numTracks; t++){
+    var tr = seq.audioTracks[t];
+    for(var c = 0; c < tr.clips.numItems; c++){ var cl = tr.clips[c]; if(cl.projectItem && cl.projectItem.nodeId === item.nodeId) return {clip: cl, t: t}; }
+  }
+  return null;
+}
+function crTrackFree(tr, start, dur, ignoreId){
+  for(var c = 0; c < tr.clips.numItems; c++){
+    var cl = tr.clips[c];
+    if(ignoreId && cl.projectItem && cl.projectItem.nodeId === ignoreId) continue;
+    var a = crSecs(cl.start), b = crSecs(cl.end);
+    if(a < start + dur - 0.001 && b > start + 0.001) return false;
+  }
+  return true;
+}
+function crAddAudioTrack(seq){
+  try{
+    app.enableQE();
+    var qs = qe.project.getActiveSequence(), n = seq.audioTracks.numTracks;
+    qs.addTracks(0, 0, 1, 1, n, 0, 0);   // no video, 1 stereo audio track after the last one
+    return seq.audioTracks.numTracks > n;
+  }catch(e){ return false; }
+}
+function crPlace(seq, item, start, dur, avoid){
+  for(var pass = 0; pass < 2; pass++){
+    for(var t = 0; t < seq.audioTracks.numTracks; t++){
+      if(avoid[t]) continue;
+      var tr = seq.audioTracks[t];
+      if(crTrackFree(tr, start, dur, null)){
+        try{ var tm = new Time(); tm.seconds = start; tr.overwriteClip(item, tm); }catch(e){ tr.overwriteClip(item, String(start)); }
+        return t;
+      }
+    }
+    if(pass === 0 && !crAddAudioTrack(seq)) break;
+  }
+  return -1;
+}
+function crRemoveClips(seq, item){
+  var n = 0;
+  for(var t = 0; t < seq.audioTracks.numTracks; t++){
+    var tr = seq.audioTracks[t];
+    for(var c = tr.clips.numItems - 1; c >= 0; c--){
+      var cl = tr.clips[c];
+      if(cl.projectItem && cl.projectItem.nodeId === item.nodeId){ cl.remove(false, false); n++; }
+    }
+  }
+  return n;
+}
+
+// a = {id, lanes:[{label, path|null, media, dur, off, remove}], markers:[{t,name,color}], anchor}
+function crApplyMix(a){
+  try{
+    var p = app.project; if(!p) return crJ({ok:false, error:'No project is open'});
+    var seq = p.activeSequence; if(!seq) return crJ({ok:false, error:'Open a sequence in Premiere first'});
+    var anchor = (a.anchor === null || a.anchor === undefined) ? crSecs(seq.getPlayerPosition()) : Number(a.anchor);
+    var bin = null, done = [], errs = [], avoid = {}, i, L, item;
+    // tracks already used by lanes we keep: new stems go on other tracks
+    for(i = 0; i < a.lanes.length; i++){
+      L = a.lanes[i]; if(L.remove) continue;
+      item = crFind(p.rootItem, function(c){ return c.name === L.label; });
+      if(item){ var h = crClipOn(seq, item); if(h) avoid[h.t] = true; }
+    }
+    for(i = 0; i < a.lanes.length; i++){
+      L = a.lanes[i];
+      item = crFind(p.rootItem, function(c){ return c.name === L.label; });
+      if(L.remove){ if(item) crRemoveClips(seq, item); continue; }
+      var path = L.path || L.media;
+      if(!item){
+        if(!bin) bin = crBin();
+        p.importFiles([path], true, bin, false);
+        item = crFind(bin, function(c){ try{ return crSamePath(c.getMediaPath(), path); }catch(e){ return false; } });
+        if(!item){ errs.push(L.label + ': import failed'); continue; }
+        item.name = L.label;
+      } else if(!crSamePath(item.getMediaPath(), path)){
+        if(item.canChangeMediaPath()) item.changeMediaPath(path, true);
+        else { errs.push(L.label + ': can\'t be replaced'); continue; }
+      }
+      var want = anchor + Number(L.off), h2 = crClipOn(seq, item);
+      if(h2){
+        var cl = h2.clip, ok = Math.abs(crSecs(cl.start) - want) < 0.002 && Math.abs((crSecs(cl.end) - crSecs(cl.start)) - L.dur) < 0.02 && crSecs(cl.inPoint) < 0.002;
+        if(ok){ done.push(L.label); continue; }
+        var keepT = h2.t; crRemoveClips(seq, item);
+        if(crTrackFree(seq.audioTracks[keepT], want, L.dur, null)){
+          try{ var tm = new Time(); tm.seconds = want; seq.audioTracks[keepT].overwriteClip(item, tm); }catch(e){ seq.audioTracks[keepT].overwriteClip(item, String(want)); }
+          done.push(L.label); continue;
+        }
+      }
+      var t = crPlace(seq, item, want, L.dur, avoid);
+      if(t < 0) errs.push(L.label + ': no free audio track — add one in Premiere');
+      else { avoid[t] = true; done.push(L.label); }
+    }
+    var nm = 0;
+    crClearMarkers(seq, 'tru:mix');
+    for(i = 0; i < (a.markers || []).length; i++){
+      var mk = a.markers[i], m = seq.markers.createMarker(anchor + mk.t);
+      m.name = mk.name || ''; m.comments = 'tru:mix'; try{ m.setColorByIndex(mk.color || 0); }catch(e){} nm++;
+    }
+    return crJ({ok: errs.length === 0, error: errs.join('; '), placed: done.length, markers: nm, anchor: anchor, seq: seq.sequenceID});
+  }catch(e){ return crJ({ok:false, error:String(e) + (e.line ? ' (line ' + e.line + ')' : '')}); }
+}

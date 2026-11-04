@@ -27,12 +27,13 @@
         var chain = Promise.resolve();
         (d.actions||[]).forEach(function(a){
           chain = chain.then(function(){
-            log('Applying '+a.label+'…');
+            log(a.kind==='mix'?'Updating the mix…':'Applying '+a.label+'…');
             a.insert = a.insert && $('ins').checked;
-            return jsx('crApply('+JSON.stringify(a)+')').then(function(res){
+            return jsx((a.kind==='mix'?'crApplyMix(':'crApply(')+JSON.stringify(a)+')').then(function(res){
               var r = {}; try{ r = JSON.parse(res); }catch(e){ r = {ok:false, error: res || 'no reply from Premiere'}; }
-              if(r.ok) log((r.fresh?'Added ':'Updated ')+a.label+(r.placed?'':' (in the Tru Studio bin)')+(r.markers?' · '+r.markers+' markers':''), 'ok');
-              else log(a.label+': '+r.error, 'err');
+              if(a.kind==='mix'){ if(r.ok) log('Mix in sync · '+r.placed+' stem track'+(r.placed===1?'':'s')+(r.markers?' · '+r.markers+' markers':''), 'ok'); else log('Mix: '+r.error, 'err'); }
+              else if(r.ok) log((r.fresh?'Added ':'Updated ')+a.label+(r.placed?'':' (in the Tru Studio bin)')+(r.markers?' · '+r.markers+' markers':''), 'ok');
+              else if(a.kind!=='mix') log(a.label+': '+r.error, 'err');
               return post('/api/link/ack', JSON.stringify({id:a.id, result:r}));
             });
           });
