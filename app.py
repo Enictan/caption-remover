@@ -30,7 +30,7 @@ import updater
 import voice
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-VERSION = "1.9.0"
+VERSION = "1.9.1"
 NATIVE = False  # set when running inside the native window
 _home = os.path.expanduser("~")
 _vids = "Movies" if sys.platform == "darwin" else "Videos"
@@ -780,6 +780,7 @@ def rec_stop(rid: str):
 
 # ---- Tru Studio Link: a panel inside Premiere Pro polls these and applies new / updated mixes + markers
 LINK_FILE = os.path.join(_home, ".caption-remover-link.json")
+PANEL_V = 2   # the panel version this app needs (older panels get no whole-mix actions)
 LINK = {"token": uuid.uuid4().hex, "seen": 0.0, "seq": None, "project": None, "queue": [], "results": {}, "last_rec": None}
 PREMIERE_DIR = os.path.join(APP_DIR, "premiere", "TruStudioLink")
 
@@ -788,7 +789,8 @@ def _write_link_file(port):
     import json
     try:
         with open(LINK_FILE, "w", encoding="utf-8") as f:
-            json.dump({"port": port, "token": LINK["token"], "app": "Caption Remover", "version": VERSION}, f)
+            json.dump({"port": port, "token": LINK["token"], "app": "Caption Remover", "version": VERSION,
+                       "host": os.path.join(PREMIERE_DIR, "host.jsx")}, f)
     except OSError as e:
         print("link file:", e)
 
@@ -810,7 +812,8 @@ async def link_poll(request: Request):
         body = json.loads((await request.body()) or b"{}")
     except ValueError:
         body = {}
-    LINK.update(seen=time.time(), seq=body.get("seq"), project=body.get("project"))
+    LINK.update(seen=time.time(), seq=body.get("seq"), project=body.get("project"), panel_v=int(body.get("v") or 1),
+                panel_host=bool(body.get("host")))
     out, LINK["queue"] = LINK["queue"], []
     return _link_json({"actions": out})
 
@@ -837,9 +840,8 @@ def _panel_installed():
     p = os.path.join(_panel_dest(), "CSXS", "manifest.xml")
     if not os.path.exists(p):
         return False
-    src = os.path.join(PREMIERE_DIR, "host.jsx")
-    try:   # same version as the one we ship?
-        return open(src, "rb").read() == open(os.path.join(_panel_dest(), "host.jsx"), "rb").read()
+    try:   # same panel as the one we ship? (its Premiere script is loaded from the app, so main.js is what matters)
+        return open(os.path.join(PREMIERE_DIR, "main.js"), "rb").read() == open(os.path.join(_panel_dest(), "main.js"), "rb").read()
     except OSError:
         return False
 
@@ -847,7 +849,8 @@ def _panel_installed():
 @app.get("/api/link/status")
 def link_status():
     pending = [a["id"] for a in LINK["queue"]]
-    return {"connected": time.time() - LINK["seen"] < 3.5, "seq": LINK["seq"], "project": LINK["project"],
+    connected = time.time() - LINK["seen"] < 3.5
+    return {"connected": connected, "outdated": connected and LINK.get("panel_v", 1) < PANEL_V, "seq": LINK["seq"], "project": LINK["project"],
             "installed": _panel_installed(), "results": LINK["results"], "pending": pending,
             "has_rec": bool(LINK["last_rec"] and os.path.exists(LINK["last_rec"]))}
 
@@ -860,6 +863,12 @@ def link_install():
     if os.path.isdir(dest):
         shutil.rmtree(dest, ignore_errors=True)
     shutil.copytree(PREMIERE_DIR, dest)
+    if sys.platform == "darwin":   # Premiere keeps a cached copy of panels
+        cache = os.path.join(_home, "Library", "Caches", "CSXS", "cep_cache")
+        if os.path.isdir(cache):
+            for n in os.listdir(cache):
+                if "thetrustudio" in n.lower() or "trustudio" in n.lower():
+                    shutil.rmtree(os.path.join(cache, n), ignore_errors=True)
     for v in range(9, 13):
         try:
             if sys.platform == "darwin":
@@ -994,8 +1003,14 @@ def _mix_out(label, cached, gain, sr=48000):
     return dst, len(a) / sr
 
 
+class PanelOutdated(Exception):
+    pass
+
+
 def _mix_run(st):
     """Bring Premiere in line with the studio: render what changed, then queue one action with the whole mix."""
+    if time.time() - LINK["seen"] < 3.5 and LINK.get("panel_v", 1) < PANEL_V:
+        raise PanelOutdated()
     lanes_out, want = [], {}
     total = sum(1 for ln in st.get("lanes", []) if ln.get("on"))
     done = 0
@@ -1046,6 +1061,8 @@ def _mix_worker():
             MIX.update(state="rendering")
             _mix_run(st)
             MIX.update(state="sent", message="Sent to Premiere" if time.time() - LINK["seen"] < 3.5 else "Waiting for the Premiere panel…")
+        except PanelOutdated:
+            MIX.update(state="error", message="The Premiere panel is out of date: Premiere button › Reinstall panel, then quit and reopen Premiere")
         except Exception as e:  # noqa
             MIX.update(state="error", message=f"Couldn't render the mix: {e}")
 
@@ -1071,6 +1088,8 @@ def mix_status():
     state = MIX["state"]
     if state == "sent" and res:
         state = "applied" if res.get("ok") else "error"
+    if state == "error" and not (res and not res.get("ok") and MIX["state"] == "sent"):
+        res = {"ok": False, "error": MIX["message"]}
     return {"state": "rendering" if MIX["running"] else state, "message": MIX["message"], "result": res,
             "lanes": {k: {"dur": v["dur"]} for k, v in MIX["lanes"].items()}, "connected": time.time() - LINK["seen"] < 3.5,
             "seq": LINK.get("seq")}
@@ -1494,6 +1513,11 @@ def main():
     port = int(os.environ.get("PORT") or _free_port())
     url = f"http://127.0.0.1:{port}"
     _write_link_file(port)
+    try:
+        if os.path.exists(os.path.join(_panel_dest(), "CSXS", "manifest.xml")) and not _panel_installed():
+            link_install()   # files only; Premiere picks it up next time it starts
+    except Exception as e:  # noqa
+        print("panel refresh:", e)
     threading.Thread(target=_warm, daemon=True).start()
     server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning"))
 

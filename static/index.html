@@ -1612,11 +1612,12 @@ async function prPoll(){ try{ PR.st=await (await fetch('/api/link/status')).json
     toast(r.ok?`Premiere: ${r.fresh?'added':'updated'} ${label}${r.placed?'':' (in the Tru Studio bin)'}${r.markers?` · ${r.markers} markers`:''}`:`Premiere: ${r.error}`); }
   if(PR.open) prRender(); }
 function prRender(){ const st=PR.st||{}, m=$('prMenu');
-  const state=$('prState'); state.textContent=st.connected?'● Connected':st.installed?'Not connected':'Panel not installed'; state.className=st.connected?'prok':'';
+  const state=$('prState'); state.textContent=st.outdated?'Panel out of date':st.connected?'● Connected':st.installed?'Not connected':'Panel not installed'; state.className=st.connected&&!st.outdated?'prok':'';
   $('prSeq').textContent=st.connected?(st.seq?`${st.project||''} › ${st.seq.name} · ${fmtS(st.seq.end)} · playhead ${fmtS(st.seq.playhead)}`:'No sequence open in Premiere'):'';
   m.querySelectorAll('[data-send]').forEach(b=>{ const k=b.dataset.send; b.disabled=k==='rec'?!st.has_rec:!(DECKS[k]&&DECKS[k].t); });
   m.querySelectorAll('#prMk button').forEach(b=>b.classList.toggle('on',b.dataset.v===PR.mk));
-  $('prNote').innerHTML=st.connected?'Sends the deck as you hear it (key, tempo, stems kept) to the open sequence at the playhead. <b>Send again after a change and it updates in place.</b> Your cues come along as markers.'
+  $('prNote').innerHTML=st.outdated?'Premiere is still running an older Tru Studio Link panel. Click <b>Reinstall panel</b> below, then <b>quit and reopen Premiere Pro</b>. After this one, updates reach Premiere by themselves.'
+    :st.connected?'Sends the deck as you hear it (key, tempo, stems kept) to the open sequence at the playhead. <b>Send again after a change and it updates in place.</b> Your cues come along as markers.'
     :st.installed?'In Premiere Pro: <b>Window › Extensions › Tru Studio Link</b>. If it isn\'t listed, quit and reopen Premiere.'
     :'Install the panel once, then restart Premiere Pro and open <b>Window › Extensions › Tru Studio Link</b>.';
   $('prInstall').textContent=st.installed?'Reinstall panel':'Install panel in Premiere…'; }
@@ -1679,7 +1680,7 @@ function mixStatusLine(){ const s=MIXS.status||{}, el=$('mxsStatus'), conn=PR.st
 const STEM_ORDER=['vocals','drums','bass','guitar','piano','other','mix'];
 function mixRender(){ if(MIXS.tab!=='mix') return; const lanes=mixLanes(), box=$('mxsLanes'), conn=PR.st&&PR.st.connected;
   $('mxsLive').checked=MIXS.live;
-  $('mxsConn').textContent=conn?(PR.st.seq?`Premiere › ${PR.st.seq.name}`:'Premiere connected · open a sequence'):PR.st&&PR.st.installed?'Premiere panel not open':'Premiere panel not installed (Premiere button, top right)';
+  $('mxsConn').textContent=PR.st&&PR.st.outdated?'Premiere panel out of date: Premiere button › Reinstall panel, then reopen Premiere':conn?(PR.st.seq?`Premiere › ${PR.st.seq.name}`:'Premiere connected · open a sequence'):PR.st&&PR.st.installed?'Premiere panel not open':'Premiere panel not installed (Premiere button, top right)';
   if(!lanes.length){ box.innerHTML=`<div class="mxs-hint"><b style="color:var(--tx)">Build a mix for your edit</b><br>Load songs into the decks and split their stems. Every stem you keep becomes its own audio track in Premiere, lined up, and updates when you change it here.</div>`; }
   else box.innerHTML=['A','B'].map(k=>{ const D=DECKS[k]; if(!D.t) return ''; const ls=lanes.filter(l=>l.deck===k).sort((a,b)=>STEM_ORDER.indexOf(a.stem)-STEM_ORDER.indexOf(b.stem));
     const kk=D.effKey(); return `<div class="mxg"><div class="mxg-h"><span class="b" style="background:${k==='A'?'#2a2312':'#14243a'};color:${k==='A'?'var(--gold2)':'#7cb6ff'}">${k}</span><span class="nm" title="${esc(D.t.name)}">${esc(D.t.name)}</span><small>${keyName(kk.tonic,kk.mode)} · ${D.bpm().toFixed(1)}</small></div>

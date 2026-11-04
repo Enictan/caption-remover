@@ -1,4 +1,6 @@
 // Premiere Pro (ExtendScript, ES3) side of Tru Studio Link.
+// The panel loads this file from the studio app each time it connects (so it always matches the app version).
+var CR_HOST_V = 2;
 var CR_TICKS = 254016000000;
 
 function crEsc(s){ return String(s).replace(/\\/g,'\\\\').replace(/"/g,'\\"').replace(/\n/g,'\\n').replace(/\r/g,'').replace(/\t/g,' '); }
@@ -221,6 +223,7 @@ function crApplyMix(a){
       var mk = a.markers[i], m = seq.markers.createMarker(anchor + mk.t);
       m.name = mk.name || ''; m.comments = 'tru:mix'; try{ m.setColorByIndex(mk.color || 0); }catch(e){} nm++;
     }
-    return crJ({ok: errs.length === 0, error: errs.join('; '), placed: done.length, markers: nm, anchor: anchor, seq: seq.sequenceID});
+    var sm = errs.length ? ('Mix: ' + errs.join('; ')) : ('Mix in sync · ' + done.length + ' stem track' + (done.length === 1 ? '' : 's') + (nm ? ' · ' + nm + ' markers' : ''));
+    return crJ({ok: errs.length === 0, error: errs.join('; '), summary: sm, placed: done.length, markers: nm, anchor: anchor, seq: seq.sequenceID});
   }catch(e){ return crJ({ok:false, error:String(e) + (e.line ? ' (line ' + e.line + ')' : '')}); }
 }

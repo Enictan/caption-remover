@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<ExtensionManifest Version="7.0" ExtensionBundleId="com.thetrustudio.link" ExtensionBundleVersion="1.1.0" ExtensionBundleName="Tru Studio Link" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<ExtensionManifest Version="7.0" ExtensionBundleId="com.thetrustudio.link" ExtensionBundleVersion="2.0.0" ExtensionBundleName="Tru Studio Link" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <ExtensionList>
-    <Extension Id="com.thetrustudio.link.panel" Version="1.1.0"/>
+    <Extension Id="com.thetrustudio.link.panel" Version="2.0.0"/>
   </ExtensionList>
   <ExecutionEnvironment>
     <HostList>
