@@ -286,6 +286,8 @@ kbd{font:500 10px Inter;color:var(--tx3);border:1px solid var(--line2);border-ra
 #kbKeys .nm{pointer-events:none}
 #kbKeys.nonames .nm{display:none}
 #mxKeys{display:flex;align-items:center;gap:5px;white-space:nowrap;flex:none} #mxKeys svg{flex:none}
+.stemsBox .dl .sx{font-size:10.5px;color:var(--gold2);padding:0 4px;border-radius:4px;letter-spacing:0;text-transform:none;font-weight:600}
+.stemsBox .dl .sx:hover{background:var(--p3)}
 #keyMenu{position:fixed;z-index:80;display:none;background:var(--p1);border:1px solid var(--line2);border-radius:10px;box-shadow:0 14px 34px rgba(0,0,0,.55);padding:6px;width:240px}
 #keyMenu .t{font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--tx3);padding:4px 6px}
 #keyMenu button{display:flex;justify-content:space-between;width:100%;padding:6px 8px;border-radius:6px;color:var(--tx2)}
@@ -1138,7 +1140,7 @@ class Deck{
       this.renderStems(); }catch(e){ if(!once) this.pollT=setTimeout(()=>this.pollStems(),1500); } }
   async loadStems(names){ if(!names||!names.length||!this.t) return; const id=this.t.id; this.busy(true,'Loading stems…');
     try{ const bufs={};
-      for(const n of names){ bufs[n]=await decodeUrl(`/api/music/stem/${id}/${n}`,`/api/music/stem/${id}/${n}?wav=1`); if(!this.t||this.t.id!==id) return; }
+      for(const n of names){ bufs[n]=await decodeUrl(`/api/music/stem/${id}/${n}?wav=1`,`/api/music/stem/${id}/${n}`); if(!this.t||this.t.id!==id) return; }
       names.forEach(n=>{ this.gains[n]=this.gains[n]??1; });
       await this.setSources(bufs); }
     catch(e){ toast('Stems: '+e.message); }
@@ -1178,15 +1180,20 @@ class Deck{
     this.q('.dtv').innerHTML=has?`${this.bpm().toFixed(1)}<small>${sync?`synced to ${SYNC.lead}`:`${this.rate>=1?'+':''}${((this.rate-1)*100).toFixed(1)}% · orig ${this.baseBpm().toFixed(1)}`}</small>`:'—';
     this.renderStems(); this.ovCache=null; this.draw();
   }
+  async exportStems(){ if(!this.t) return; this.busy(true,'Saving stems…');
+    try{ const r=await api('/api/music/export_stems/'+this.t.id,{}); const d=await r.json(); if(!r.ok) throw new Error(d.detail||'failed');
+      toast(`Saved ${d.count} stems to Music › ${d.output.split(/[\\/]/).pop()}`); api('/api/music/reveal',{path:d.output}).catch(()=>{}); }
+    catch(e){ toast("Couldn't save the stems: "+e.message); } finally{ this.busy(false); } }
   renderStems(){
     const box=this.q('.stemsBox'), t=this.t, s=this.stem;
     if(!t){ box.innerHTML='<div class="dl">Stems</div>'; return; }
     if(this.mode==='stems'&&this.gainNodes){
       const names=Object.keys(this.gainNodes), short=names.length>4;
-      box.innerHTML=`<div class="dl">Stems <span>${esc((STEM_MODELS||[]).find(m=>m.id===(s&&s.model))?.label||'')}</span></div><div class="stems" style="--n:${names.length}">${names.map(n=>`
+      box.innerHTML=`<div class="dl">Stems <span><button class="sx" title="Save each stem as its own WAV file (opens the folder)">Export</button> ${esc(((STEM_MODELS||[]).find(m=>m.id===(s&&s.model))?.label||'').split(' (')[0].split(',')[0])}</span></div><div class="stems" style="--n:${names.length}">${names.map(n=>`
         <div class="stem ${this.effGains()[n]===0?'off':''}" data-s="${n}"><div class="sn"><i style="background:${STEM_COL[n]||'#999'}"></i>${short?STEM_SHORT[n]||n:STEM_NAME[n]||n}</div>
         <div class="sb"><button class="m ${this.mute[n]?'on':''}" title="Mute">M</button><button class="s ${this.solo[n]?'on':''}" title="Solo">S</button></div>
         <input type="range" min="0" max="1.25" step="0.01" value="${this.gains[n]??1}" title="${STEM_NAME[n]||n} volume (double-click: 100%)"></div>`).join('')}</div>`;
+      box.querySelector('.sx').onclick=()=>this.exportStems();
       box.querySelectorAll('.stem').forEach(el=>{ const n=el.dataset.s, upd=()=>{ this.applyGains(); this.renderStems(); };
         el.querySelector('.m').onclick=()=>{ this.mute[n]=!this.mute[n]; upd(); }; el.querySelector('.s').onclick=()=>{ this.solo[n]=!this.solo[n]; upd(); };
         const r=el.querySelector('input'); r.oninput=()=>{ this.gains[n]=+r.value; this.applyGains(); el.classList.toggle('off',this.effGains()[n]===0); }; r.ondblclick=()=>{ this.gains[n]=1; upd(); }; });

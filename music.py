@@ -430,8 +430,11 @@ def content_id(path: str) -> str:
     return h.hexdigest()[:16]
 
 
+STEMS_VER = "v2"   # bump to make every song split again (v2: GPU output checked against the CPU)
+
+
 def stems_dir(cache_root: str, path: str, model: str) -> str:
-    return os.path.join(cache_root, content_id(path), model)
+    return os.path.join(cache_root, content_id(path), f"{model}-{STEMS_VER}")
 
 
 def cached_stems(cache_root: str, path: str, model: str):
@@ -491,6 +494,35 @@ def _load_roformer(models_dir, progress):
     return m
 
 
+_GPU_OK = {}
+
+
+def _trust_gpu(key, run, dev):
+    """Run a short excerpt on the GPU and on the CPU. Use the GPU only if both agree: some PyTorch
+    GPU back-ends (notably Apple's MPS) can silently return wrong numbers, which sounds like noise."""
+    if dev == "cpu":
+        return "cpu"
+    if key not in _GPU_OK:
+        try:
+            a, b = np.asarray(run(dev), np.float64), np.asarray(run("cpu"), np.float64)
+            err = float(np.sum((a - b) ** 2) / (np.sum(b ** 2) + 1e-12))
+            _GPU_OK[key] = err < 1e-3 and np.isfinite(a).all()
+            print(f"[stems] {key} on {dev}: differs from CPU by {10 * np.log10(err + 1e-20):.1f} dB -> "
+                  f"{'using ' + dev if _GPU_OK[key] else 'using the CPU (GPU output was wrong)'}", flush=True)
+        except Exception as e:
+            _GPU_OK[key] = False
+            print(f"[stems] {key} on {dev} failed ({e}); using the CPU", flush=True)
+    return dev if _GPU_OK[key] else "cpu"
+
+
+def _excerpt(wav, secs):
+    n = wav.shape[-1]
+    L = int(secs * SR)
+    s0 = max(0, n // 2 - L // 2)
+    seg = wav[..., s0:s0 + L]
+    return np.pad(seg, [(0, 0)] * (seg.ndim - 1) + [(0, L - seg.shape[-1])]) if seg.shape[-1] < L else seg
+
+
 def roformer_vocals(m, wav, dev, progress=None, cancelled=None, lo=0.0, hi=1.0):
     """wav (2, n) float32 at 44.1 kHz -> vocals (2, n). Overlapping windows, cross-faded."""
     import torch
@@ -505,6 +537,11 @@ def roformer_vocals(m, wav, dev, progress=None, cancelled=None, lo=0.0, hi=1.0):
     N = x.shape[1]
     starts = list(range(0, max(1, N - border), step))
     out, cnt = np.zeros_like(x), np.zeros(N, np.float32)
+
+    def one(d):
+        with torch.no_grad():
+            return m.to(d)(torch.from_numpy(np.ascontiguousarray(_excerpt(wav, C / SR)))[None].to(d)).float().cpu().numpy()
+    dev = _trust_gpu("vocal model", one, dev)
     mdev = m.to(dev)
     for k, s0 in enumerate(starts):
         if cancelled and cancelled():
@@ -552,6 +589,14 @@ def _demucs(m, mix, dev, progress, cancelled, lo, hi, msg):
         ref = wav.mean(0)
         mean, std = ref.mean(), ref.std() + 1e-8
         x = ((wav - mean) / std)[None]
+        ex = torch.from_numpy(np.ascontiguousarray(_excerpt(x.numpy(), 10)))
+
+        def one(d):
+            with torch.no_grad():
+                return apply_model(m, ex.to(d), device=d, shifts=0, split=True, overlap=0.25).cpu().numpy()
+        dapply.tqdm.tqdm = orig
+        dev = _trust_gpu("stem model " + "/".join(m.sources), one, dev)
+        dapply.tqdm.tqdm = _Bar
         try:
             with torch.no_grad():
                 out = apply_model(m, x.to(dev), device=dev, shifts=1, split=True, overlap=0.25, progress=True)

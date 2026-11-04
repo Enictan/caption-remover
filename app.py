@@ -30,7 +30,7 @@ import updater
 import voice
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-VERSION = "1.6.0"
+VERSION = "1.6.1"
 NATIVE = False  # set when running inside the native window
 _home = os.path.expanduser("~")
 _vids = "Movies" if sys.platform == "darwin" else "Videos"
@@ -456,7 +456,8 @@ def music_export(body: dict):
 @app.post("/api/music/reveal")
 def music_reveal(body: dict):
     p = body.get("path")
-    if p and os.path.exists(p) and os.path.dirname(os.path.abspath(p)) == os.path.abspath(out_dir()):
+    root = os.path.abspath(out_dir())
+    if p and os.path.exists(p) and os.path.commonpath([os.path.abspath(p), root]) == root:
         _open(p, reveal=True)
     return {"ok": True}
 
@@ -582,7 +583,9 @@ def music_stem_file(tid: str, name: str, wav: int = 0):
         raise HTTPException(404, "Stem not found")
     if wav:   # for web views that can't decode FLAC
         import music
-        w = os.path.join(MUSIC_DIR, f"stem_{tid}_{name}.wav")
+        import hashlib
+        key = hashlib.sha1(f"{p}|{os.path.getmtime(p)}".encode()).hexdigest()[:10]
+        w = os.path.join(MUSIC_DIR, f"stem_{tid}_{name}_{key}.wav")
         if not os.path.exists(w):
             music.render(p, w, 0, None, 0, 1.0, fade=False)
         return FileResponse(w, media_type="audio/wav")
@@ -617,6 +620,23 @@ def music_save_deck(body: dict):
     out = os.path.join(d, f"{safe} ({', '.join(tag)}).wav")
     music.render_mix(use_stems, t["path"], out, gains, semis, ratio)
     return {"output": out, "filename": os.path.basename(out)}
+
+
+@app.post("/api/music/export_stems/{tid}")
+def music_export_stems(tid: str):
+    """Each stem as its own 24-bit WAV in <output>/Music/<song> stems/, ready for any editor."""
+    import soundfile as sf
+    import music
+    t = _track(tid)
+    stems = t.get("stems") or {}
+    if not stems:
+        raise HTTPException(400, "Split the stems first")
+    safe = "".join(ch for ch in t["name"] if ch not in '\\/:*?"<>|').strip() or "song"
+    d = os.path.join(out_dir(), "Music", f"{safe} stems")
+    os.makedirs(d, exist_ok=True)
+    for n, p in stems.items():
+        sf.write(os.path.join(d, f"{safe} - {n}.wav"), music.audio(p).T, music.SR, subtype="PCM_24")
+    return {"output": d, "count": len(stems)}
 
 
 @app.get("/favicon.ico")
