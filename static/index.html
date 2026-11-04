@@ -1004,6 +1004,13 @@ async function decodeUrl(url, fallback){
   catch(e){ if(!fallback) throw e; return await ac().decodeAudioData(await get(fallback)); }
 }
 
+// Songs and stems come from the app as plain WAV at the output device's own sample rate: nothing to
+// decode or resample here, so every deck plays at true speed. Length is checked against the analysis.
+async function decodePcm(t,stem){ const sr=ac().sampleRate, q=`/api/music/pcm/${t.id}?sr=${sr}`+(stem?`&stem=${encodeURIComponent(stem)}`:'');
+  const old=stem?`/api/music/stem/${t.id}/${stem}?wav=1`:'/api/music/audio/'+t.id+'?wav=1';
+  const b=await decodeUrl(q,old), off=t.duration?b.duration/t.duration:1;
+  if(Math.abs(off-1)>0.004) console.warn(`[decks] ${t.name}${stem?' '+stem:''}: decoded length ${b.duration.toFixed(2)}s vs ${t.duration.toFixed(2)}s (sr ${b.sampleRate}/${sr})`);
+  return b; }
 class Deck{
   constructor(id){ Object.assign(this,{id,el:$('deck'+id),t:null,node:null,bus:null,parts:[],mode:'mix',playing:false,anchor:{off:0,t0:0,rate:1},srcs:[],
       rate:1,semis:0,bpmFactor:1,cue:0,gen:0,peaks:null,ovCache:null,stem:null,gains:{},mute:{},solo:{},busyN:0,saved:null,dirty:true});
@@ -1056,7 +1063,7 @@ class Deck{
     this.anchor={off:this.cue,t0:0,rate:1};
     this.render(); this.busy(true,`Loading ${t.name}…`);
     try{
-      const [buf,pk]=await Promise.all([decodeUrl('/api/music/audio/'+t.id,'/api/music/audio/'+t.id+'?wav=1'), api('/api/music/peaks/'+t.id).then(r=>r.json())]);
+      const [buf,pk]=await Promise.all([decodePcm(t), api('/api/music/peaks/'+t.id).then(r=>r.json())]);
       if(this.t!==t) return;
       this.peaks=pk; this.ovCache=null;
       await this.setSources({mix:buf});
@@ -1140,7 +1147,7 @@ class Deck{
       this.renderStems(); }catch(e){ if(!once) this.pollT=setTimeout(()=>this.pollStems(),1500); } }
   async loadStems(names){ if(!names||!names.length||!this.t) return; const id=this.t.id; this.busy(true,'Loading stems…');
     try{ const bufs={};
-      for(const n of names){ bufs[n]=await decodeUrl(`/api/music/stem/${id}/${n}?wav=1`,`/api/music/stem/${id}/${n}`); if(!this.t||this.t.id!==id) return; }
+      for(const n of names){ bufs[n]=await decodePcm(this.t,n); if(!this.t||this.t.id!==id) return; }
       names.forEach(n=>{ this.gains[n]=this.gains[n]??1; });
       await this.setSources(bufs); }
     catch(e){ toast('Stems: '+e.message); }

@@ -30,7 +30,7 @@ import updater
 import voice
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-VERSION = "1.6.1"
+VERSION = "1.6.2"
 NATIVE = False  # set when running inside the native window
 _home = os.path.expanduser("~")
 _vids = "Movies" if sys.platform == "darwin" else "Videos"
@@ -325,6 +325,22 @@ def update_restart():
 # --------------------------------------------------------------------------- music: song matcher
 MUSIC_DIR = os.path.join(JOBS_DIR, "music")
 os.makedirs(MUSIC_DIR, exist_ok=True)
+
+
+def _clean_music_work(prefixes=("pcm_", "stem_", "full_", "pv_"), older_than=12 * 3600):
+    """Playback copies are rebuilt on demand: drop old ones so they don't fill the disk."""
+    import time
+    now = time.time()
+    for n in os.listdir(MUSIC_DIR):
+        p = os.path.join(MUSIC_DIR, n)
+        try:
+            if n.startswith(prefixes) and now - os.path.getmtime(p) > older_than:
+                os.remove(p)
+        except OSError:
+            pass
+
+
+_clean_music_work()
 tracks: dict[str, dict] = {}     # id -> analysis + path + name
 
 
@@ -478,6 +494,31 @@ def music_audio(tid: str, wav: int = 0):
             music.render(t["path"], p, 0, None, 0, 1.0, fade=False)
         return FileResponse(p, media_type="audio/wav")
     return FileResponse(t["path"])
+
+
+@app.get("/api/music/pcm/{tid}")
+def music_pcm(tid: str, sr: int = 44100, stem: str = ""):
+    """The song (or one stem) as plain WAV at exactly the playback device's sample rate, so the window
+    never decodes a compressed file or resamples itself (WebKit can get either wrong: wrong speed)."""
+    import hashlib
+    import soundfile as sf
+    import music
+    t = _track(tid)
+    src = (t.get("stems") or {}).get(stem) if stem else t["path"]
+    if not src or not os.path.exists(src):
+        raise HTTPException(404, "Audio not found")
+    sr = int(sr) if 8000 <= int(sr) <= 192000 else music.SR
+    key = hashlib.sha1(f"{src}|{os.path.getmtime(src)}|{sr}".encode()).hexdigest()[:12]
+    w = os.path.join(MUSIC_DIR, f"pcm_{tid}_{stem or 'mix'}_{key}.wav")
+    if not os.path.exists(w):
+        a = music.audio(src)
+        if sr != music.SR:
+            import soxr
+            a = soxr.resample(a.T, music.SR, sr, quality="VHQ").T
+        os.makedirs(MUSIC_DIR, exist_ok=True)
+        sf.write(w + ".part.wav", np.clip(a.T, -1, 1), sr, subtype="PCM_24")
+        os.replace(w + ".part.wav", w)
+    return FileResponse(w, media_type="audio/wav")
 
 
 @app.get("/api/music/peaks/{tid}")
@@ -660,6 +701,7 @@ def music_delete(tid: str):
             os.remove(t["path"])
         except OSError:
             pass
+    _clean_music_work((f"pcm_{tid}_", f"stem_{tid}_", f"full_{tid}"), older_than=-1)
     return {"ok": True}
 
 
