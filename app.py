@@ -22,7 +22,7 @@ import webbrowser
 
 import cv2
 import numpy as np
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 
 import engine
@@ -30,7 +30,7 @@ import updater
 import voice
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-VERSION = "1.6.2"
+VERSION = "1.7.0"
 NATIVE = False  # set when running inside the native window
 _home = os.path.expanduser("~")
 _vids = "Movies" if sys.platform == "darwin" else "Videos"
@@ -63,6 +63,7 @@ DEFAULT_SETTINGS = {
     "keys_octave": 3,               # lowest octave shown
     "keys_type": False,             # play notes from the computer keyboard
     "keys_vol": 0.6,
+    "quantize": True,               # Music: hot cues, loops and jumps snap to the beat
 }
 
 
@@ -351,6 +352,45 @@ def _track(tid):
     return t
 
 
+SONG_MEM_DIR = os.path.join(SUPPORT, "songs")
+
+
+def _mem_path(t):
+    return os.path.join(SONG_MEM_DIR, t["cid"] + ".json")
+
+
+def load_mem(t) -> dict:
+    """What you set up for a song (hot cues, key fix, tempo x2/x½), remembered by the file's content."""
+    import json
+    try:
+        with open(_mem_path(t), encoding="utf-8") as f:
+            m = json.load(f)
+            return m if isinstance(m, dict) else {}
+    except Exception:
+        return {}
+
+
+def save_mem(t, **changes):
+    import json
+    m = load_mem(t)
+    m.update(changes)
+    os.makedirs(SONG_MEM_DIR, exist_ok=True)
+    tmp = _mem_path(t) + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(m, f)
+    os.replace(tmp, _mem_path(t))
+    t["mem"] = m
+    return m
+
+
+def _apply_key(t, tonic, mode):
+    import music
+    t.update(tonic=tonic, mode=mode, key=music.key_name(tonic, mode), camelot=music.camelot(tonic, mode), key_conf=1.0,
+             key_user=True, key_source="you")
+    rt, rm = music._relative(tonic, mode)
+    t["key_alts"] = [{"tonic": rt, "mode": rm, "key": music.key_name(rt, rm) + " (same notes)", "camelot": music.camelot(rt, rm)}]
+
+
 def _public(t):
     out = {k: v for k, v in t.items() if k not in ("path", "stems", "_peaks")}
     out["stem_names"] = list((t.get("stems") or {}).keys())
@@ -376,7 +416,7 @@ async def music_upload(file: UploadFile = File(...)):
     name = os.path.splitext(os.path.basename(file.filename or "Song"))[0]
     if a.get("title"):
         name = a["title"] + (f" · {a['artist']}" if a.get("artist") else "")
-    t = dict(a, id=tid, name=name, path=path, detected={"tonic": a["tonic"], "mode": a["mode"]})
+    t = dict(a, id=tid, name=name, path=path, detected={"tonic": a["tonic"], "mode": a["mode"]}, cid=music.content_id(path))
     tracks[tid] = t
     try:
         st = load_settings().get("stem_model", "htdemucs")
@@ -387,7 +427,18 @@ async def music_upload(file: UploadFile = File(...)):
             _stem_jobs[tid] = {"state": "done", "progress": 1.0, "message": "Done", "model": st}
     except Exception:
         pass
+    t["mem"] = load_mem(t)
+    k = t["mem"].get("key")
+    if isinstance(k, dict) and "tonic" in k:
+        _apply_key(t, int(k["tonic"]) % 12, k.get("mode", "major"))
     return _public(t)
+
+
+@app.post("/api/music/mem/{tid}")
+def music_mem(tid: str, body: dict):
+    t = _track(tid)
+    ok = {k: v for k, v in body.items() if k in ("hot", "bpm_factor", "eq")}
+    return save_mem(t, **ok)
 
 
 @app.post("/api/music/key/{tid}")
@@ -395,10 +446,11 @@ def music_set_key(tid: str, body: dict):
     import music
     t = _track(tid)
     tonic, mode = int(body["tonic"]) % 12, body["mode"]
-    t.update(tonic=tonic, mode=mode, key=music.key_name(tonic, mode), camelot=music.camelot(tonic, mode), key_conf=1.0,
-             key_user=True, key_source="you")
-    rt, rm = music._relative(tonic, mode)
-    t["key_alts"] = [{"tonic": rt, "mode": rm, "key": music.key_name(rt, rm) + " (same notes)", "camelot": music.camelot(rt, rm)}]
+    _apply_key(t, tonic, mode)
+    try:
+        save_mem(t, key={"tonic": tonic, "mode": mode})
+    except Exception:
+        pass
     return _public(t)
 
 
@@ -678,6 +730,50 @@ def music_export_stems(tid: str):
     for n, p in stems.items():
         sf.write(os.path.join(d, f"{safe} - {n}.wav"), music.audio(p).T, music.SR, subtype="PCM_24")
     return {"output": d, "count": len(stems)}
+
+
+# ---- mix recorder: the window streams raw float32 stereo; saved as one 24-bit WAV in <output>/Music
+_recs: dict[str, dict] = {}
+
+
+@app.post("/api/music/rec/start")
+def rec_start(body: dict):
+    rid = uuid.uuid4().hex[:10]
+    p = os.path.join(MUSIC_DIR, f"rec_{rid}.f32")
+    open(p, "wb").close()
+    _recs[rid] = {"path": p, "sr": int(body.get("sr") or 44100)}
+    return {"id": rid}
+
+
+@app.post("/api/music/rec/{rid}/chunk")
+async def rec_chunk(rid: str, request: Request):
+    r = _recs.get(rid)
+    if not r:
+        raise HTTPException(404, "No such recording")
+    data = await request.body()
+    with open(r["path"], "ab") as f:
+        f.write(data[: len(data) // 8 * 8])
+    return {"ok": True}
+
+
+@app.post("/api/music/rec/{rid}/stop")
+def rec_stop(rid: str):
+    import datetime
+    import soundfile as sf
+    r = _recs.pop(rid, None)
+    if not r:
+        raise HTTPException(404, "No such recording")
+    a = np.fromfile(r["path"], dtype=np.float32).reshape(-1, 2)
+    os.remove(r["path"])
+    loud = np.flatnonzero(np.abs(a).max(1) > 1e-4)
+    if not len(loud):
+        raise HTTPException(400, "Nothing was playing while recording")
+    a = a[max(0, loud[0] - r["sr"] // 20): loud[-1] + r["sr"]]          # trim silence before the first sound
+    d = os.path.join(out_dir(), "Music")
+    os.makedirs(d, exist_ok=True)
+    out = os.path.join(d, "Mix " + datetime.datetime.now().strftime("%Y-%m-%d %H.%M.%S") + ".wav")
+    sf.write(out, np.clip(a, -1, 1), r["sr"], subtype="PCM_24")
+    return {"output": out, "filename": os.path.basename(out), "seconds": len(a) / r["sr"]}
 
 
 @app.get("/favicon.ico")

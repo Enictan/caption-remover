@@ -246,7 +246,7 @@ kbd{font:500 10px Inter;color:var(--tx3);border:1px solid var(--line2);border-ra
 #mixer .sep{width:1px;height:24px;background:var(--line)}
 #mixStatus{font-size:11.5px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
 #mixStatus .mok{color:var(--green)} #mixStatus .mno{color:var(--amber)}
-#xfade{width:120px}
+#xfade{width:100px}
 #crate{grid-column:2;grid-row:1/4;background:var(--p1);border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
 #crate .mhead{display:flex;align-items:center;justify-content:space-between;padding:0 10px;height:34px;border-bottom:1px solid var(--line);flex:none}
 #crate h4{font-size:10.5px;font-weight:600;letter-spacing:.9px;text-transform:uppercase;color:var(--tx3)}
@@ -288,6 +288,47 @@ kbd{font:500 10px Inter;color:var(--tx3);border:1px solid var(--line2);border-ra
 #mxKeys{display:flex;align-items:center;gap:5px;white-space:nowrap;flex:none} #mxKeys svg{flex:none}
 .stemsBox .dl .sx{font-size:10.5px;color:var(--gold2);padding:0 4px;border-radius:4px;letter-spacing:0;text-transform:none;font-weight:600}
 .stemsBox .dl .sx:hover{background:var(--p3)}
+.padsBox{gap:4px!important}
+.ptabs{display:flex;align-items:center;gap:2px;height:20px;flex:none}
+.ptabs button{height:20px;padding:0 7px;border-radius:5px;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--tx3)}
+.ptabs button:hover:not(:disabled){color:var(--tx)}
+.ptabs button.on{background:var(--p3);color:var(--tx)}
+.ptabs button.live:not(.on){color:var(--green)}
+.pextra{margin-left:auto;font-size:10.5px;color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.pbody{flex:1;min-height:0;display:flex;flex-direction:column;gap:4px}
+.hcs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;flex:1}
+.hc{position:relative;border-radius:6px;border:1px solid var(--line2);background:var(--p3);display:flex;align-items:center;justify-content:space-between;padding:0 6px 0 9px;min-width:0;font-size:10.5px;overflow:hidden}
+.hc::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c)}
+.hc b{font-weight:700;color:var(--c)} .hc span{color:var(--tx2);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden}
+.hc:not(.empty){background:color-mix(in srgb,var(--c) 16%,var(--p3));border-color:color-mix(in srgb,var(--c) 45%,var(--line2))}
+.hc.empty{opacity:.55} .hc.empty::before{opacity:.35}
+.hc:hover:not(:disabled){filter:brightness(1.18)} .hc:active{transform:translateY(1px)}
+.lrow{display:flex;gap:4px;flex:1}
+.lb{flex:1;border-radius:6px;border:1px solid var(--line2);background:var(--p3);font-size:11.5px;font-weight:600;min-width:0}
+.lb.wide{flex:2;font-size:11px;font-weight:500;color:var(--tx2)}
+.lb.on{background:rgba(65,196,138,.2);border-color:var(--green);color:#bff0d6}
+.lb.exit{color:var(--green);border-color:rgba(65,196,138,.5)}
+.lb:hover:not(:disabled){border-color:#4a4a55}
+.eqs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;flex:1;align-items:start}
+.eqc{display:flex;flex-direction:column;gap:4px;min-width:0}
+.eqn{font-size:10.5px;font-weight:600;display:flex;justify-content:space-between;gap:3px;white-space:nowrap}
+.eqn i{font-style:normal;font-weight:500;color:var(--tx3);font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis}
+.eqc input{width:100%}
+.eqc .kill{height:20px;border-radius:5px;border:1px solid var(--line2);background:var(--p3);font-size:10px;font-weight:700;color:var(--tx2)}
+.eqc .kill.on{background:#5a2222;border-color:#7a2d2d;color:#ffb3b3}
+.eqc.killed .eqn{color:#ffb3b3}
+.eqc .fl{display:flex;justify-content:space-between;font-size:9.5px;color:var(--tx3);font-weight:600;height:20px;align-items:center}
+.pextra .sx{font-size:10.5px;color:var(--gold2);padding:0 4px;border-radius:4px;font-weight:600}
+.pextra .sx:hover{background:var(--p3)}
+#phaseBox{position:relative;width:112px;height:30px;flex:none}
+#phaseBox canvas{position:absolute;inset:0;width:100%;height:100%}
+#phaseT{position:absolute;right:0;bottom:-11px;font-size:9px;color:var(--tx3);white-space:nowrap}
+#mxQ{font-weight:700;width:26px;padding:0;flex:none}
+#mxRec{display:flex;align-items:center;gap:5px;flex:none;font-variant-numeric:tabular-nums;min-width:52px;justify-content:center}
+#mxRec .rdot{width:8px;height:8px;border-radius:50%;background:#a33}
+#mxRec.recording{background:#5a1f22;border-color:#c2383e;color:#ffd0d2}
+#mxRec.recording .rdot{background:#ff4d55;animation:rblink 1s infinite}
+@keyframes rblink{50%{opacity:.25}}
 #keyMenu{position:fixed;z-index:80;display:none;background:var(--p1);border:1px solid var(--line2);border-radius:10px;box-shadow:0 14px 34px rgba(0,0,0,.55);padding:6px;width:240px}
 #keyMenu .t{font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--tx3);padding:4px 6px}
 #keyMenu button{display:flex;justify-content:space-between;width:100%;padding:6px 8px;border-radius:6px;color:var(--tx2)}
@@ -392,13 +433,16 @@ kbd{font:500 10px Inter;color:var(--tx3);border:1px solid var(--line2);border-ra
     <div id="mixer">
       <div class="grp"><button class="btn sm gold" id="mxPlay" title="Play / pause both decks together (Shift+Space)"><svg id="mxPlayIc" width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5v14l12-7z"/></svg><span id="mxPlayT">Play both</span></button></div>
       <div class="sep"></div>
-      <div class="grp"><span class="lbl">Tempo</span><div class="seg" id="mxSync"><button data-v="free" class="on" title="Each deck keeps its own tempo">Independent</button><button data-v="sync" title="Lock both decks to one master tempo">Sync</button></div>
-        <span class="lbl" id="mxLeadL" style="margin-left:4px">Leader</span><div class="seg" id="mxLead"><button data-v="A" class="on">A</button><button data-v="B">B</button></div>
-        <button class="minib" id="mxAlign" title="Line up Deck B's beats with Deck A's (or the follower's with the leader's)">Align beats</button></div>
+      <div class="grp"><div class="seg" id="mxSync" title="Tempo: Free = each deck keeps its own · Sync = both follow the leader"><button data-v="free" class="on" title="Each deck keeps its own tempo">Free</button><button data-v="sync" title="Lock both decks to one master tempo">Sync</button></div>
+        <span class="lbl" id="mxLeadL" style="margin-left:2px">Lead</span><div class="seg" id="mxLead"><button data-v="A" class="on">A</button><button data-v="B">B</button></div>
+        <button class="minib" id="mxAlign" title="Line up Deck B's beats with Deck A's (or the follower's with the leader's)">Align</button></div>
       <div class="sep"></div>
+      <div id="phaseBox" title="Phase meter: where each deck is in its bar. The middle line shows how far apart the beats are — green means in step"><canvas id="phase"></canvas><span id="phaseT"></span></div>
       <div id="mixStatus">Load a song into each deck</div>
       <div class="grp"><span class="lbl">A</span><input type="range" id="xfade" min="0" max="1" step="0.01" value="0.5" title="Crossfader (double-click to centre)"><span class="lbl">B</span></div>
-      <button class="minib" id="mxKeys" title="Show a piano keyboard to check the key by ear (K)"><svg width="14" height="12" viewBox="0 0 28 20" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="1" width="26" height="18" rx="2"/><path d="M8 1v18M14 1v18M20 1v18" stroke-width="1.6"/><path d="M6 1h4v10H6zM12 1h4v10h-4zM18 1h4v10h-4z" fill="currentColor" stroke="none"/></svg>Keys</button>
+      <button class="minib on" id="mxQ" title="Quantize: hot cues, loops and jumps land exactly on the beat (Q)">Q</button>
+      <button class="minib" id="mxRec" title="Record everything you play into one WAV file (R)"><i class="rdot"></i><span id="mxRecT">Rec</span></button>
+      <button class="minib" id="mxKeys" title="Show a piano keyboard to check the key by ear (K)"><svg width="14" height="12" viewBox="0 0 28 20" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="1" width="26" height="18" rx="2"/><path d="M8 1v18M14 1v18M20 1v18" stroke-width="1.6"/><path d="M6 1h4v10H6zM12 1h4v10h-4zM18 1h4v10h-4z" fill="currentColor" stroke="none"/></svg></button>
     </div>
     <div class="deck B" id="deckB" data-d="B"></div>
     <div id="kbd">
@@ -996,7 +1040,13 @@ const fmtS1=t=>{ t=Math.max(0,t||0); return `${Math.floor(t/60)}:${(t%60).toFixe
 const wrap12=s=>((s%12)+12)%12;
 const LIB={tracks:[],fits:{},page:0,uploading:0,pick:null};
 const SYNC={on:false,lead:'A'};
-let XF=0.5, SEL='A', STEM_MODELS=null, DECKS={};
+let XF=0.5, SEL='A', STEM_MODELS=null, DECKS={}, QUANT=true, MASTER=null;
+const HOT_COL=['#e5484d','#f5a524','#f0d24a','#46c37b','#3fb6c9','#4f8fe0','#9b6cf0','#e05fb0'];
+let MASTER_OUT=null;
+// decks -> master -> safety limiter (only acts near full scale, so two loud songs together never clip) -> speakers / recorder
+function master(){ const A=ac(); if(!MASTER){ MASTER=A.createGain(); const L=A.createDynamicsCompressor();
+    L.threshold.value=-2; L.knee.value=0; L.ratio.value=20; L.attack.value=0.002; L.release.value=0.12;
+    MASTER.connect(L); L.connect(A.destination); MASTER_OUT=L; } return MASTER; }
 
 async function decodeUrl(url, fallback){
   const get=async u=>{ const r=await fetch(u); if(!r.ok) throw new Error((await r.json().catch(()=>({}))).detail||r.statusText); return r.arrayBuffer(); };
@@ -1013,7 +1063,7 @@ async function decodePcm(t,stem){ const sr=ac().sampleRate, q=`/api/music/pcm/${
   return b; }
 class Deck{
   constructor(id){ Object.assign(this,{id,el:$('deck'+id),t:null,node:null,bus:null,parts:[],mode:'mix',playing:false,anchor:{off:0,t0:0,rate:1},srcs:[],
-      rate:1,semis:0,bpmFactor:1,cue:0,gen:0,peaks:null,ovCache:null,stem:null,gains:{},mute:{},solo:{},busyN:0,saved:null,dirty:true});
+      rate:1,semis:0,bpmFactor:1,cue:0,gen:0,loop:null,hot:null,tab:'cues',eq:{low:0,mid:0,high:0,filt:0,kill:{}},peaks:null,ovCache:null,stem:null,gains:{},mute:{},solo:{},busyN:0,saved:null,dirty:true});
     this.build(); }
   get dur(){ return this.t?this.t.duration:0; }
   baseBpm(){ return this.t?this.t.bpm*this.bpmFactor:0; }
@@ -1038,11 +1088,13 @@ class Deck{
       <div><div class="dl">Tempo <span class="tsub"><button class="minib" data-a="tx2" title="Tempo detected at half speed? Double it" style="height:18px;padding:0 5px">×2</button> <button class="minib" data-a="th2" title="Tempo detected at double speed? Halve it" style="height:18px;padding:0 5px">×½</button></span></div>
         <div class="bigv dtv">—</div>
         <div class="trange"><button class="ibtn" data-a="td" title="−0.1 BPM">−</button><input type="range" class="tr" min="-30" max="30" step="0.1" value="0" title="Tempo ±30% (double-click to reset)"><button class="ibtn" data-a="tu" title="+0.1 BPM">+</button><button class="minib" data-a="t0" title="Original tempo">0</button></div></div>
-      <div class="stemsBox"></div>
+      <div class="padsBox"><div class="ptabs"><button data-t="cues" title="Hot cues: tap an empty pad to mark a spot, tap again to jump there">Cues</button><button data-t="loop" title="Beat loops">Loop</button><button data-t="eq" title="EQ and filter">EQ</button><button data-t="stems" title="Split and mix vocals, drums, bass…">Stems</button><span class="pextra"></span></div><div class="pbody"></div></div>
     </div>
     <div class="dempty"><div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div><b>Load a song into Deck ${id}</b><span>Drop a file here, click to browse, or press ${id} next to a song in the Library.</span></div>
     <div class="dbusy"><i class="spin"></i><span class="bt">Loading…</span></div>`;
     this.cz=this.q('.cz'); this.co=this.q('.co');
+    try{ this.tab=localStorage.getItem('padtab'+id)||'cues'; }catch(e){}
+    this.q('.ptabs').addEventListener('click',e=>{ const b=e.target.closest('button[data-t]'); if(!b) return; e.stopPropagation(); this.tab=b.dataset.t; try{ localStorage.setItem('padtab'+id,this.tab); }catch(err){} this.renderPads(); });
     this.el.addEventListener('pointerdown',()=>selectDeck(this.id),true);
     this.q('.dempty').onclick=()=>{ LIB.pick=this.id; $('mFile').click(); };
     this.el.querySelectorAll('[data-a]').forEach(b=>b.addEventListener('click',e=>{ e.stopPropagation(); this.act(b.dataset.a,e); }));
@@ -1059,7 +1111,8 @@ class Deck{
   busy(on,txt){ this.busyN=Math.max(0,this.busyN+(on?1:-1)); this.q('.dbusy').style.display=this.busyN?'flex':'none'; if(txt) this.q('.bt').textContent=txt; }
   async load(t){
     if(this.t&&this.t.id===t.id) return;
-    this.unload(true); this.t=t; this.semis=0; this.rate=1; this.bpmFactor=1; this.cue=t.hot_start||0; this.stem=null; this.gains={}; this.mute={}; this.solo={}; this.saved=null;
+    this.unload(true); this.t=t; this.semis=0; this.rate=1; this.bpmFactor=(t.mem&&t.mem.bpm_factor)||1; this.cue=t.hot_start||0; this.stem=null; this.gains={}; this.mute={}; this.solo={}; this.saved=null;
+    this.loop=null; this.hot=Array.from({length:8},(_,k)=>t.mem&&t.mem.hot&&Number.isFinite(t.mem.hot[k])?t.mem.hot[k]:null);
     this.anchor={off:this.cue,t0:0,rate:1};
     this.render(); this.busy(true,`Loading ${t.name}…`);
     try{
@@ -1082,8 +1135,13 @@ class Deck{
   async ensureNode(){ if(this.node) return; const A=ac();
     const node=await SignalsmithStretch(A,{numberOfInputs:1,numberOfOutputs:1,outputChannelCount:[2]});
     this.inSum=A.createGain(); this.inSum.gain.value=0; this.inSum.connect(node);
-    if(!this.bus){ this.bus=A.createGain(); this.bus.connect(A.destination); applyXfade(); }
-    node.connect(this.bus); this.node=node;
+    if(!this.bus){ this.bus=A.createGain(); this.bus.connect(master()); applyXfade(); }
+    // EQ + filter between the key processor and the deck fader
+    const lo=A.createBiquadFilter(), mi=A.createBiquadFilter(), hi=A.createBiquadFilter(), lp=A.createBiquadFilter(), hp=A.createBiquadFilter();
+    lo.type='lowshelf'; lo.frequency.value=220; mi.type='peaking'; mi.frequency.value=1000; mi.Q.value=0.8; hi.type='highshelf'; hi.frequency.value=3200;
+    lp.type='lowpass'; lp.frequency.value=22000; lp.Q.value=0.9; hp.type='highpass'; hp.frequency.value=10; hp.Q.value=0.9;
+    node.connect(lo); lo.connect(mi); mi.connect(hi); hi.connect(lp); lp.connect(hp); hp.connect(this.bus);
+    this.eqN={low:lo,mid:mi,high:hi,lp,hp}; this.node=node; this.applyEq();
     try{ this.lat=await node.latency(); }catch(e){ this.lat=0.1; }
     node.schedule({active:true,semitones:this.pitchComp(),outputTime:A.currentTime}); }
   pitchComp(){ return this.semis-12*Math.log2(this.rate); }
@@ -1097,12 +1155,49 @@ class Deck{
     if(was) this.startSources(p,A.currentTime+0.015); }
   fade(to,at){ const g=this.inSum.gain; g.cancelScheduledValues(at); g.setValueAtTime(g.value,at); g.linearRampToValueAtTime(to,at+0.01); }
   startSources(off,at){ const A=ac(); off=Math.max(0,Math.min(this.dur,off));
-    this.srcs=Object.entries(this.bufs).map(([n,b])=>{ const s=A.createBufferSource(); s.buffer=b; s.playbackRate.value=this.rate; s.connect(this.partGains[n]); s.start(at,Math.min(off,b.duration)); return s; });
+    if(this.loop&&(off<this.loop.start-1e-3||off>this.loop.end+1e-3)) this.loop=null;
+    this.srcs=Object.entries(this.bufs).map(([n,b])=>{ const s=A.createBufferSource(); s.buffer=b; s.playbackRate.value=this.rate; this.loopSrc(s); s.connect(this.partGains[n]); s.start(at,Math.min(off,b.duration)); return s; });
     this.anchor={off,t0:at,rate:this.rate}; this.fade(1,at); }
   stopSources(at){ const A=ac(); at=at||A.currentTime; (this.srcs||[]).forEach(s=>{ try{ s.stop(at); }catch(e){} }); this.srcs=[]; }
   get loaded(){ return !!(this.t&&this.bufs); }
   pos(){ const a=this.anchor||{off:0,t0:0,rate:1}; if(!this.playing||!AC) return Math.max(0,Math.min(this.dur,a.off));
-    return Math.max(0,Math.min(this.dur,a.off+Math.max(0,AC.currentTime-a.t0)*a.rate)); }
+    return Math.max(0,Math.min(this.dur,this.fold(a.off+Math.max(0,AC.currentTime-a.t0)*a.rate))); }
+  fold(p){ const L=this.loop; if(!L||p<L.end) return p; return L.start+((p-L.start)%(L.end-L.start)); }
+  loopSrc(s){ const L=this.loop; s.loop=!!L; if(L){ s.loopStart=L.start; s.loopEnd=L.end; } }
+  // ---- beats, quantize, loops, hot cues
+  beatLen(i){ const b=this.t.beats||[]; return i>=0&&i<b.length-1?b[i+1]-b[i]:60/(this.t.bpm||120); }
+  beatTime(i){ const b=this.t.beats||[]; if(!b.length) return i*60/(this.t.bpm||120); if(i<0) return b[0]+i*this.beatLen(0); if(i>=b.length) return b[b.length-1]+(i-b.length+1)*this.beatLen(b.length-2); return b[i]; }
+  snap(p){ const b=this.t.beats||[]; if(b.length<2) return p; const i=Math.max(0,this.beatIndex(p)); const a=b[i], c=b[Math.min(b.length-1,i+1)]; return p-a<=c-p?a:c; }
+  phase(p){ const i=this.beatIndex(p); if(i<0) return 0; return (p-this.beatTime(i))/this.beatLen(i); }
+  setLoop(n){ if(!this.loaded) return; const p=this.pos();
+    if(this.loop&&this.loop.beats===n){ return this.exitLoop(); }
+    let i, start;
+    if(this.loop){ start=this.loop.start; i=this.loop.i; }
+    else { i=this.beatIndex(p); start=QUANT&&i>=0?this.beatTime(i):p; if(i<0) i=0; }
+    const end=Math.min(this.dur,QUANT&&this.loop?this.beatTime(i+n):(QUANT?this.beatTime(i+n):start+n*this.beatLen(i)));
+    if(end-start<0.02) return;
+    this.applyLoop({start,end,beats:n,i},p); }
+  applyLoop(L,p){ const A=ac(); this.loop=L;
+    if(this.playing){ (this.srcs||[]).forEach(s=>this.loopSrc(s));
+      if(p>=L.start&&p<L.end) this.anchor={off:p,t0:A.currentTime,rate:this.rate}; else this.seek(this.fold(Math.max(p,L.start))); }
+    else if(p<L.start||p>=L.end) this.anchor={off:L.start,t0:A.currentTime,rate:this.rate};
+    this.renderPads(); this.draw(); }
+  exitLoop(){ if(!this.loop) return; const p=this.pos(); this.loop=null; (this.srcs||[]).forEach(s=>{ s.loop=false; });
+    this.anchor={off:p,t0:ac().currentTime,rate:this.rate}; this.renderPads(); this.draw(); }
+  loopSize(f){ if(!this.loop) return; const n=Math.max(0.25,Math.min(64,this.loop.beats*f)); const L=this.loop, p=this.pos();
+    const end=QUANT&&Number.isInteger(n)?this.beatTime(L.i+n):L.start+n*this.beatLen(L.i);
+    this.applyLoop({...L,beats:n,end:Math.min(this.dur,end)},p); }
+  hotPress(k,e){ if(!this.loaded) return; const h=this.hot||(this.hot=Array(8).fill(null));
+    if(e&&(e.shiftKey||e.button===2||e.ctrlKey||e.altKey)){ if(h[k]!=null){ h[k]=null; this.saveMem(); toast(`Deck ${this.id}: hot cue ${k+1} cleared`); } this.renderPads(); this.draw(); return; }
+    if(h[k]==null){ const p=this.pos(); h[k]=QUANT?this.snap(p):p; this.saveMem(); this.renderPads(); this.draw(); return; }
+    let to=h[k]; if(this.playing&&QUANT&&(this.t.beats||[]).length>1){ const ph=this.phase(this.pos()); to=to+ph*this.beatLen(Math.max(0,this.beatIndex(to))); }
+    if(this.loop&&(to<this.loop.start||to>=this.loop.end)) this.exitLoop();
+    this.seek(to); }
+  saveMem(){ if(!this.t) return; api('/api/music/mem/'+this.t.id,{hot:this.hot,bpm_factor:this.bpmFactor}).then(r=>r.json()).then(m=>{ if(this.t) this.t.mem=m; }).catch(()=>{}); }
+  // ---- EQ + filter
+  applyEq(){ const N=this.eqN; if(!N) return; const E=this.eq, t=ac().currentTime, db=(k)=>E.kill[k]?-60:E[k];
+    N.low.gain.setTargetAtTime(db('low'),t,0.012); N.mid.gain.setTargetAtTime(db('mid'),t,0.012); N.high.gain.setTargetAtTime(db('high'),t,0.012);
+    const f=E.filt; N.lp.frequency.setTargetAtTime(f<-0.02?20000*Math.pow(150/20000,-f):22000,t,0.02); N.hp.frequency.setTargetAtTime(f>0.02?20*Math.pow(6000/20,f):10,t,0.02); }
   heardPos(){ return this.playing?Math.max(0,this.pos()-(this.lat||0)*this.rate):this.pos(); }   // what you hear right now
   async play(at){ if(!this.loaded) return; const gen=++this.gen; const A=ac(); if(A.state==='suspended') await A.resume();
     if(gen!==this.gen||this.playing) return;   // paused while starting up
@@ -1113,6 +1208,7 @@ class Deck{
     this.anchor={off:p,t0:A.currentTime,rate:this.rate}; this.playing=false; this.render(); }
   toggle(){ this.playing?this.pause():(SYNC.on&&this.other().playing&&SYNC.lead!==this.id?(alignBeats(this.id),this.play()):this.play()); }
   seek(p){ if(!this.t) return; p=Math.max(0,Math.min(this.dur,p)); const A=ac();
+    if(this.loop&&(p<this.loop.start-1e-3||p>=this.loop.end)) { this.loop=null; (this.srcs||[]).forEach(s=>{ s.loop=false; }); this.renderPads(); }
     if(this.playing&&this.bufs){ this.fade(0,A.currentTime); this.stopSources(A.currentTime+0.012); this.startSources(p,A.currentTime+0.012); }
     else this.anchor={off:p,t0:A.currentTime,rate:this.rate};
     this.dirty=true; this.draw(); }
@@ -1159,7 +1255,7 @@ class Deck{
     ({play:()=>this.toggle(),cue:()=>this.cuePress(),jb:()=>this.jump(-4),jf:()=>this.jump(4),b1:()=>this.jump(-1),f1:()=>this.jump(1),
       kd:()=>this.setSemis(this.semis-1),ku:()=>this.setSemis(this.semis+1),k0:()=>this.setSemis(0),kmatch:()=>this.matchKey(),
       td:()=>!sync&&this.setRate((this.bpm()-0.1)/this.baseBpm()),tu:()=>!sync&&this.setRate((this.bpm()+0.1)/this.baseBpm()),t0:()=>!sync&&this.setRate(1),
-      tx2:()=>{ this.bpmFactor*=2; this.render(); syncTempo(); mixStatus(); }, th2:()=>{ this.bpmFactor/=2; this.render(); syncTempo(); mixStatus(); },
+      tx2:()=>{ this.bpmFactor*=2; this.saveMem(); this.render(); syncTempo(); mixStatus(); }, th2:()=>{ this.bpmFactor/=2; this.saveMem(); this.render(); syncTempo(); mixStatus(); },
       eject:()=>this.unload(), save:()=>this.save(), keymenu:()=>keyMenu(this,e), split:()=>this.split(),
       stemcancel:()=>api('/api/music/stems/'+this.t.id+'/cancel',{}), stemretry:()=>this.split()}[a]||(()=>{}))();
   }
@@ -1185,34 +1281,69 @@ class Deck{
     tr.disabled=!has||sync; tr.value=((this.rate-1)*100).toFixed(1);
     ['td','tu','t0'].forEach(a=>this.q(`[data-a=${a}]`).disabled=!has||sync);
     this.q('.dtv').innerHTML=has?`${this.bpm().toFixed(1)}<small>${sync?`synced to ${SYNC.lead}`:`${this.rate>=1?'+':''}${((this.rate-1)*100).toFixed(1)}% · orig ${this.baseBpm().toFixed(1)}`}</small>`:'—';
-    this.renderStems(); this.ovCache=null; this.draw();
+    this.renderPads(); this.ovCache=null; this.draw();
+  }
+  renderPads(){ const has=!!this.t;
+    this.el.querySelectorAll('.ptabs button').forEach(b=>{ b.classList.toggle('on',b.dataset.t===this.tab); b.disabled=!has; });
+    const lt=this.q('.ptabs [data-t=loop]'); lt.classList.toggle('live',!!this.loop);
+    const body=this.q('.pbody'), ex=this.q('.pextra'); body.className='pbody'+(this.tab==='stems'?' stemsBox':''); ex.innerHTML='';
+    if(this.tab==='stems') return this.renderStems();
+    if(!has){ body.innerHTML=''; return; }
+    if(this.tab==='cues'){
+      const h=this.hot||[];
+      body.innerHTML=`<div class="hcs">${h.map((v,k)=>`<button class="hc ${v==null?'empty':''}" data-k="${k}" style="--c:${HOT_COL[k]}" title="${v==null?'Tap to set hot cue '+(k+1)+' here':'Hot cue '+(k+1)+' at '+fmtS1(v)+' · tap to jump · Shift-click or right-click to clear'}"><b>${k+1}</b><span>${v==null?'+':fmtS1(v)}</span></button>`).join('')}</div>`;
+      body.querySelectorAll('.hc').forEach(b=>{ const k=+b.dataset.k; b.onclick=e=>{ e.stopPropagation(); this.hotPress(k,e); }; b.oncontextmenu=e=>{ e.preventDefault(); e.stopPropagation(); this.hotPress(k,{shiftKey:true}); }; });
+      ex.textContent=QUANT?'on the beat':''; }
+    else if(this.tab==='loop'){
+      const L=this.loop, fmtB=n=>n<1?(n===0.5?'½':'¼'):n;
+      body.innerHTML=`<div class="lrow">${[1,2,4,8,16].map(n=>`<button class="lb ${L&&L.beats===n?'on':''}" data-n="${n}" title="Loop ${n} beat${n>1?'s':''} from here (tap again to leave the loop)">${n}</button>`).join('')}</div>
+        <div class="lrow"><button class="lb" data-f="0.5" ${L?'':'disabled'} title="Halve the loop">½×</button><button class="lb" data-f="2" ${L?'':'disabled'} title="Double the loop">2×</button><button class="lb wide ${L?'exit':''}" data-x="1" ${L?'':'disabled'} title="Leave the loop and play on">${L?'Exit loop':'No loop'}</button></div>`;
+      body.querySelectorAll('[data-n]').forEach(b=>b.onclick=e=>{ e.stopPropagation(); this.setLoop(+b.dataset.n); });
+      body.querySelectorAll('[data-f]').forEach(b=>b.onclick=e=>{ e.stopPropagation(); this.loopSize(+b.dataset.f); });
+      body.querySelector('[data-x]').onclick=e=>{ e.stopPropagation(); this.exitLoop(); };
+      ex.textContent=L?`${fmtB(L.beats)} beat${L.beats===1?'':'s'} · ${(L.end-L.start).toFixed(2)}s`:''; }
+    else if(this.tab==='eq'){
+      const E=this.eq, col=(k,name)=>`<div class="eqc ${E.kill[k]?'killed':''}" data-k="${k}"><div class="eqn">${name}<i>${E.kill[k]?'off':(E[k]>0?'+':'')+Math.round(E[k])+' dB'}</i></div><input type="range" min="-24" max="6" step="0.5" value="${E[k]}" title="${name} (double-click: 0 dB)"><button class="kill ${E.kill[k]?'on':''}" title="Cut the ${name.toLowerCase()} completely">Kill</button></div>`;
+      const f=E.filt, fl=Math.abs(f)<0.02?'off':f<0?'low-pass':'high-pass';
+      body.innerHTML=`<div class="eqs">${col('low','Low')}${col('mid','Mid')}${col('high','High')}<div class="eqc filt"><div class="eqn">Filter<i>${fl}</i></div><input type="range" min="-1" max="1" step="0.01" value="${f}" title="Left: muffle (low-pass) · right: thin out (high-pass) · double-click: off"><div class="fl"><span>LP</span><span>HP</span></div></div></div>`;
+      body.querySelectorAll('.eqc[data-k]').forEach(c=>{ const k=c.dataset.k, r=c.querySelector('input'), i=c.querySelector('i');
+        r.oninput=()=>{ E[k]=+r.value; if(!E.kill[k]) i.textContent=(E[k]>0?'+':'')+Math.round(E[k])+' dB'; this.applyEq(); };
+        r.ondblclick=()=>{ E[k]=0; this.applyEq(); this.renderPads(); };
+        c.querySelector('.kill').onclick=e=>{ e.stopPropagation(); E.kill[k]=!E.kill[k]; this.applyEq(); this.renderPads(); }; });
+      const fr=body.querySelector('.filt input'), fi=body.querySelector('.filt i');
+      fr.oninput=()=>{ let v=+fr.value; if(Math.abs(v)<0.04) v=0; E.filt=v; fi.textContent=Math.abs(v)<0.02?'off':v<0?'low-pass':'high-pass'; this.applyEq(); };
+      fr.ondblclick=()=>{ E.filt=0; this.applyEq(); this.renderPads(); };
+      ex.innerHTML=`<button class="sx" title="Reset EQ and filter">Reset</button>`; ex.querySelector('.sx').onclick=e=>{ e.stopPropagation(); this.eq={low:0,mid:0,high:0,filt:0,kill:{}}; this.applyEq(); this.renderPads(); }; }
   }
   async exportStems(){ if(!this.t) return; this.busy(true,'Saving stems…');
     try{ const r=await api('/api/music/export_stems/'+this.t.id,{}); const d=await r.json(); if(!r.ok) throw new Error(d.detail||'failed');
       toast(`Saved ${d.count} stems to Music › ${d.output.split(/[\\/]/).pop()}`); api('/api/music/reveal',{path:d.output}).catch(()=>{}); }
     catch(e){ toast("Couldn't save the stems: "+e.message); } finally{ this.busy(false); } }
   renderStems(){
-    const box=this.q('.stemsBox'), t=this.t, s=this.stem;
-    if(!t){ box.innerHTML='<div class="dl">Stems</div>'; return; }
+    if(this.tab!=='stems') return;
+    const box=this.q('.pbody'), ex=this.q('.pextra'), t=this.t, s=this.stem;
+    if(!t){ box.innerHTML=''; return; }
     if(this.mode==='stems'&&this.gainNodes){
       const names=Object.keys(this.gainNodes), short=names.length>4;
-      box.innerHTML=`<div class="dl">Stems <span><button class="sx" title="Save each stem as its own WAV file (opens the folder)">Export</button> ${esc(((STEM_MODELS||[]).find(m=>m.id===(s&&s.model))?.label||'').split(' (')[0].split(',')[0])}</span></div><div class="stems" style="--n:${names.length}">${names.map(n=>`
+      ex.innerHTML=`<button class="sx" title="Save each stem as its own WAV file (opens the folder)">Export</button>`;
+      box.innerHTML=`<div class="stems" style="--n:${names.length}">${names.map(n=>`
         <div class="stem ${this.effGains()[n]===0?'off':''}" data-s="${n}"><div class="sn"><i style="background:${STEM_COL[n]||'#999'}"></i>${short?STEM_SHORT[n]||n:STEM_NAME[n]||n}</div>
         <div class="sb"><button class="m ${this.mute[n]?'on':''}" title="Mute">M</button><button class="s ${this.solo[n]?'on':''}" title="Solo">S</button></div>
         <input type="range" min="0" max="1.25" step="0.01" value="${this.gains[n]??1}" title="${STEM_NAME[n]||n} volume (double-click: 100%)"></div>`).join('')}</div>`;
-      box.querySelector('.sx').onclick=()=>this.exportStems();
+      ex.querySelector('.sx').onclick=e=>{ e.stopPropagation(); this.exportStems(); };
       box.querySelectorAll('.stem').forEach(el=>{ const n=el.dataset.s, upd=()=>{ this.applyGains(); this.renderStems(); };
         el.querySelector('.m').onclick=()=>{ this.mute[n]=!this.mute[n]; upd(); }; el.querySelector('.s').onclick=()=>{ this.solo[n]=!this.solo[n]; upd(); };
         const r=el.querySelector('input'); r.oninput=()=>{ this.gains[n]=+r.value; this.applyGains(); el.classList.toggle('off',this.effGains()[n]===0); }; r.ondblclick=()=>{ this.gains[n]=1; upd(); }; });
       return; }
     if(s&&(s.state==='running'||s.state==='queued')){
-      box.innerHTML=`<div class="splitbox"><div class="dl">Stems <span>${Math.round(100*(s.progress||0))}%</span></div><div class="sprog"><i style="width:${100*(s.progress||0)}%"></i></div>
+      ex.textContent=Math.round(100*(s.progress||0))+'%';
+      box.innerHTML=`<div class="splitbox"><div class="sprog"><i style="width:${100*(s.progress||0)}%"></i></div>
         <div class="note" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(s.message||'Splitting…')}</div><div><button class="minib" data-a="stemcancel">Cancel</button></div></div>`; }
     else if(s&&s.state==='error'){
-      box.innerHTML=`<div class="splitbox"><div class="dl">Stems</div><div class="note" style="color:var(--red)">${esc(s.error||'Splitting failed')}</div><div><button class="minib" data-a="stemretry">Try again</button></div></div>`; }
+      box.innerHTML=`<div class="splitbox"><div class="note" style="color:var(--red)">${esc(s.error||'Splitting failed')}</div><div><button class="minib" data-a="stemretry">Try again</button></div></div>`; }
     else{
       const opts=(STEM_MODELS||[{id:'htdemucs',label:'4 stems'}]).map(m=>`<option value="${m.id}" ${m.id===(STEM_DEFAULT||'htdemucs')?'selected':''}>${esc(m.label)}</option>`).join('');
-      box.innerHTML=`<div class="splitbox"><div class="dl">Stems</div><div class="trow"><button class="btn sm gold" data-a="split" title="Separate vocals, drums, bass and more">Split stems</button><select class="smodel" title="Which stems">${opts}</select></div>
+      box.innerHTML=`<div class="splitbox"><div class="trow"><button class="btn sm gold" data-a="split" title="Separate vocals, drums, bass and more">Split stems</button><select class="smodel" title="Which stems">${opts}</select></div>
         <div class="note">Hear and mix each part on its own. Also sharpens key detection.</div></div>`; }
     box.querySelectorAll('[data-a]').forEach(b=>b.onclick=e=>{ e.stopPropagation(); this.act(b.dataset.a,e); });
   }
@@ -1231,6 +1362,12 @@ class Deck{
         for(let k=0;k<=cols;k++){ const i=Math.floor(t0*ps)+k; if(i<0||i>=P.peak.length) continue; const x=(i/ps-t0)/span*w; this.bars(g,x,Math.max(1,cw-0.4),mid,h,i,col); }
         const b=this.t.beats||[]; let j=Math.max(0,this.beatIndex(t0));
         for(;j<b.length&&b[j]<=t0+span;j++){ if(b[j]<t0) continue; const x=(b[j]-t0)/span*w; const bar=j%4===0; g.fillStyle=bar?'rgba(255,255,255,.55)':'rgba(255,255,255,.16)'; g.fillRect(Math.round(x),bar?0:h*0.78,1,bar?h:h*0.22); }
+        if(this.loop){ const L=this.loop, x0=(L.start-t0)/span*w, x1=(L.end-t0)/span*w; g.fillStyle='rgba(65,196,138,.13)'; g.fillRect(x0,0,x1-x0,h); g.fillStyle='#41c48a'; g.fillRect(Math.round(x0),0,1.5,h); g.fillRect(Math.round(x1)-1,0,1.5,h); }
+        (this.hot||[]).forEach((v,k)=>{ if(v==null||v<t0||v>t0+span) return; const x=(v-t0)/span*w; g.fillStyle=HOT_COL[k]; g.fillRect(x-0.5,0,1,h); g.fillRect(x,h-13,13,13); g.fillStyle='#111'; g.font='bold 9px Inter'; g.fillText(k+1,x+4,h-3.5); });
+        const o=this.other(); if(o&&o.t&&o.peaks&&(o.t.beats||[]).length>1){   // the other deck's beats, mapped onto this deck's timeline
+          const po=o.heardPos(), ro=o.rate, ob=o.t.beats, oc=PAL[o.id].mid; let k=Math.max(0,o.beatIndex(po-(span/2)/this.rate*ro)); g.fillStyle=oc;
+          for(;k<ob.length;k++){ const tt=p+(ob[k]-po)/ro*this.rate; if(tt>t0+span) break; if(tt<t0) continue; const x=(tt-t0)/span*w, bar=k%4===0; g.globalAlpha=bar?0.95:0.55; g.fillRect(Math.round(x)-(bar?1:0),0,bar?2:1,bar?11:6); }
+          g.globalAlpha=1; }
         if(this.cue>=t0&&this.cue<=t0+span){ const x=(this.cue-t0)/span*w; g.fillStyle='#41c48a'; g.beginPath(); g.moveTo(x-5,0); g.lineTo(x+5,0); g.lineTo(x,7); g.fill(); g.fillRect(x-0.5,0,1,h); }
         g.fillStyle=col.head; g.fillRect(Math.round(w/2)-1,0,2,h); }
       else if(this.t){ g.fillStyle='#3a3a42'; g.font='12px Inter'; g.fillText('Loading waveform…',12,h/2); } }
@@ -1240,7 +1377,9 @@ class Deck{
         this.ovCache=oc; }
       g.clearRect(0,0,w,h); if(this.ovCache){ g.drawImage(this.ovCache,0,0,w,h);
         const x=this.heardPos()/this.dur*w; g.fillStyle='rgba(10,10,12,.55)'; g.fillRect(0,0,x,h); g.fillStyle='#fff'; g.fillRect(x-1,0,2,h);
-        const cx=this.cue/this.dur*w; g.fillStyle='#41c48a'; g.fillRect(cx-0.5,0,1,h); } }
+        const cx=this.cue/this.dur*w; g.fillStyle='#41c48a'; g.fillRect(cx-0.5,0,1,h);
+        if(this.loop){ const a=this.loop.start/this.dur*w, b=this.loop.end/this.dur*w; g.fillStyle='rgba(65,196,138,.55)'; g.fillRect(a,h-4,Math.max(2,b-a),4); }
+        (this.hot||[]).forEach((v,k)=>{ if(v==null) return; const x=v/this.dur*w; g.fillStyle=HOT_COL[k]; g.fillRect(x-1,0,3,5); }); } }
     this.q('.dtime').innerHTML=this.t?`<b>${fmtS1(this.heardPos())}</b> / ${fmtS(this.dur)}`:'0:00.0';
     this.dirty=false;
   }
@@ -1284,7 +1423,23 @@ let rafOn=false;
 function kick(){ if(rafOn) return; rafOn=true; requestAnimationFrame(tick); }
 function tick(){ rafOn=false; if(MODE!=='music') return; let any=false;
   Object.values(DECKS).forEach(d=>{ if(d.playing){ any=true; if(d.pos()>=d.dur-0.02){ d.pause(); d.seek(d.dur); } } if(d.playing||d.dirty) d.draw(); });
-  mixPlayIc(); if(any) kick(); }
+  mixPlayIc(); drawPhase(); if(any) kick(); }
+// phase meter: where each deck is in its bar, and how far apart their beats are
+function drawPhase(){ const c=$('phase'); if(!c||!c.parentElement) return; const d=devicePixelRatio||1, w=c.parentElement.clientWidth, h=c.parentElement.clientHeight; if(!w) return;
+  if(c.width!==Math.round(w*d)||c.height!==Math.round(h*d)){ c.width=Math.round(w*d); c.height=Math.round(h*d); }
+  const g=c.getContext('2d'); g.setTransform(d,0,0,d,0,0); g.clearRect(0,0,w,h);
+  const rows=[DECKS.A,DECKS.B], bw=(w-22)/4, rh=9; let ph={};
+  rows.forEach((D,r)=>{ const y=r?h-rh-1:1; g.fillStyle=PAL[D.id].mid; g.font='bold 9px Inter'; g.fillText(D.id,0,y+8);
+    const ok=D&&D.t&&(D.t.beats||[]).length>1; let i=-1, f=0; if(ok){ const p=D.heardPos(); i=D.beatIndex(p); f=i<0?0:D.phase(p); ph[D.id]=f; }
+    for(let k=0;k<4;k++){ const x=11+k*bw; g.fillStyle='#24242a'; g.fillRect(x,y,bw-2,rh);
+      if(ok&&i>=0&&i%4===k){ g.fillStyle=PAL[D.id].mid; g.fillRect(x,y,(bw-2)*(D.playing?Math.max(0.15,1-f):1),rh); } } });
+  // offset between the two decks' beats, as a bar from the centre
+  const cy=h/2, cx=11+2*bw-1; g.fillStyle='#2c2c33'; g.fillRect(11,cy-1,4*bw-2,2);
+  if(ph.A!=null&&ph.B!=null&&DECKS.A.t&&DECKS.B.t){ let df=ph.B-ph.A; df-=Math.round(df); const ms=df*DECKS.B.beatLen(Math.max(0,DECKS.B.beatIndex(DECKS.B.heardPos())))/DECKS.B.rate*1000;
+    const good=Math.abs(ms)<12; g.fillStyle=good?'#41c48a':Math.abs(ms)<40?'#f0c46c':'#e5484d'; const len=df*4*bw; g.fillRect(Math.min(cx,cx+len),cy-2,Math.max(2,Math.abs(len)),4);
+    const el=$('phaseT'); if(el) el.textContent=(DECKS.A.playing||DECKS.B.playing)?(good?'in step':`B ${ms>0?'early':'late'} ${Math.abs(Math.round(ms))}ms`):''; }
+  else { const el=$('phaseT'); if(el) el.textContent=''; }
+  g.fillStyle='#555'; g.fillRect(cx,cy-4,1,8); }
 
 /* ---- key menu */
 function keyMenu(deck,e){ const t=deck.t, km=$('keyMenu'), r=e.currentTarget?e.currentTarget.getBoundingClientRect():e.target.getBoundingClientRect(); if(!t) return;
@@ -1343,13 +1498,50 @@ document.addEventListener('keydown',e=>{ if(MODE!=='music'||e.metaKey||e.ctrlKey
   else if(e.key===']') d.setSemis(d.semis+1); else if(e.key==='[') d.setSemis(d.semis-1);
   else if(e.key==='ArrowLeft'){ e.preventDefault(); d.jump(e.shiftKey?-4:-1); } else if(e.key==='ArrowRight'){ e.preventDefault(); d.jump(e.shiftKey?4:1); }
   else if(e.key==='c'||e.key==='C') d.cuePress();
-  else if((e.key==='k'||e.key==='K')&&!e.shiftKey) $('mxKeys').click(); });
+  else if((e.key==='k'||e.key==='K')&&!e.shiftKey) $('mxKeys').click();
+  else if(e.key==='q'||e.key==='Q') $('mxQ').click();
+  else if(e.key==='r'||e.key==='R') recToggle();
+  else if(e.key==='l'||e.key==='L') d.setLoop(4);
+  else if(e.key>='3'&&e.key<='9'||e.key==='0'){ /* hot cues 1-8 on 3…0 would clash with deck select 1/2: use the pads */ } });
 new ResizeObserver(()=>{ if(MODE==='music'){ Object.values(DECKS).forEach(d=>{ d.ovCache=null; d.draw(); }); renderLib(); mixStatus(); } }).observe($('musicView'));
 $('musicView').addEventListener('click',e=>{ const b=e.target.closest('button'); if(b) setTimeout(()=>b.blur(),0); });
 document.addEventListener('keyup',e=>{ if(MODE==='music'&&e.key===' '&&e.target.tagName==='BUTTON') e.preventDefault(); },true);
 let STEM_DEFAULT='htdemucs';
 fetch('/api/music/stem_models').then(r=>r.json()).then(d=>{ STEM_MODELS=d.models; STEM_DEFAULT=d.default; Object.values(DECKS).forEach(x=>x.renderStems()); }).catch(()=>{});
 DECKS.A=new Deck('A'); DECKS.B=new Deck('B'); selectDeck('A'); renderLib(); mixStatus();
+// ---------- mix recorder: everything the decks play, streamed to the app and saved as one WAV
+const REC_WORKLET=`class RecTap extends AudioWorkletProcessor{
+  constructor(){ super(); this.on=false; this.buf=[]; this.n=0;
+    this.port.onmessage=e=>{ if(e.data==='start'){ this.on=true; } else if(e.data==='stop'){ this.on=false; this.flush(); this.port.postMessage('done'); } }; }
+  flush(){ if(!this.n) return; const out=new Float32Array(this.n*2); let o=0;
+    for(const [l,r] of this.buf){ for(let i=0;i<l.length;i++){ out[o++]=l[i]; out[o++]=r[i]; } }
+    this.port.postMessage(out,[out.buffer]); this.buf=[]; this.n=0; }
+  process(inp){ if(this.on){ const x=inp[0]; let l,r; if(x&&x.length){ l=x[0].slice(); r=(x[1]||x[0]).slice(); } else { l=new Float32Array(128); r=l; }
+      this.buf.push([l,r]); this.n+=l.length; if(this.n>=sampleRate/2) this.flush(); }
+    return true; } }
+registerProcessor('rec-tap',RecTap);`;
+const REC={on:false,rid:null,node:null,q:Promise.resolve(),t0:0,timer:null,busy:false};
+async function recToggle(){ if(REC.busy) return; if(REC.on) return recStop(); REC.busy=true;
+  try{ const A=ac(); if(A.state==='suspended') await A.resume();
+    if(!REC.node){ const url=URL.createObjectURL(new Blob([REC_WORKLET],{type:'application/javascript'})); await A.audioWorklet.addModule(url);
+      REC.node=new AudioWorkletNode(A,'rec-tap',{numberOfInputs:1,numberOfOutputs:1,outputChannelCount:[2],channelCount:2,channelCountMode:'explicit'});
+      const z=A.createGain(); z.gain.value=0; master(); MASTER_OUT.connect(REC.node); REC.node.connect(z); z.connect(A.destination);
+      REC.node.port.onmessage=e=>{ if(e.data==='done'){ if(REC.done) REC.done(); return; } const buf=e.data, rid=REC.rid;
+        REC.q=REC.q.then(()=>fetch(`/api/music/rec/${rid}/chunk`,{method:'POST',headers:{'Content-Type':'application/octet-stream'},body:buf})).catch(()=>{}); }; }
+    const r=await (await api('/api/music/rec/start',{sr:A.sampleRate})).json(); REC.rid=r.id; REC.on=true; REC.node.port.postMessage('start'); REC.t0=performance.now();
+    $('mxRec').classList.add('recording'); REC.timer=setInterval(()=>{ const s=(performance.now()-REC.t0)/1000; $('mxRecT').textContent=`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`; },250);
+    toast('Recording the mix — press Rec again to stop'); }
+  catch(e){ toast("Couldn't start recording: "+e.message); } finally{ REC.busy=false; } }
+async function recStop(){ REC.busy=true; REC.on=false; clearInterval(REC.timer); $('mxRec').classList.remove('recording'); $('mxRecT').textContent='Saving…';
+  try{ await new Promise(res=>{ REC.done=res; REC.node.port.postMessage('stop'); setTimeout(res,1500); }); await REC.q;
+    const d=await (await api(`/api/music/rec/${REC.rid}/stop`,{})).json(); if(!d.output) throw new Error(d.detail||'nothing recorded');
+    toast(`Saved ${d.filename} (${fmtS(d.seconds)})`); api('/api/music/reveal',{path:d.output}).catch(()=>{}); }
+  catch(e){ toast('Recording: '+e.message); } finally{ REC.busy=false; $('mxRecT').textContent='Rec'; } }
+function setQuant(on){ QUANT=on; $('mxQ').classList.toggle('on',on); Object.values(DECKS).forEach(d=>d.renderPads()); }
+$('mxQ').onclick=()=>{ setQuant(!QUANT); api('/api/settings',{quantize:QUANT}).catch(()=>{}); toast(QUANT?'Quantize on: cues and loops snap to the beat':'Quantize off'); };
+$('mxRec').onclick=()=>recToggle();
+fetch('/api/settings').then(r=>r.json()).then(st=>setQuant(st.quantize!==false)).catch(()=>{});
+
 // ---------- on-screen keyboard: check a key by ear
 let KB_LAST='';
 const KB={open:false,names:true,scale:'sel',oct:3,type:false,vol:0.6,held:{},drone:null,bus:null,down:new Set()};
