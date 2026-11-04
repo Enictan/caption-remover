@@ -19,6 +19,7 @@ cp "$ROOT/app.py" "$ROOT/engine.py" "$ROOT/music.py" "$ROOT/updater.py" "$ROOT/m
 cp "$ROOT/static/index.html" "$ROOT/static/voice.html" "$APP/Contents/Resources/app/static/"
 mkdir -p "$APP/Contents/Resources/app/static/vendor" && cp "$ROOT/static/vendor/"*.js "$APP/Contents/Resources/app/static/vendor/"
 mkdir -p "$APP/Contents/Resources/app/roformer" && cp "$ROOT/roformer/"*.py "$ROOT/roformer/LICENSE" "$APP/Contents/Resources/app/roformer/"
+mkdir -p "$APP/Contents/Resources/app/premiere" && cp -R "$ROOT/premiere/TruStudioLink" "$APP/Contents/Resources/app/premiere/"
 printf 'APPL????' > "$APP/Contents/PkgInfo"
 
 echo "Built: $APP  (v$VERSION)"

@@ -329,6 +329,20 @@ kbd{font:500 10px Inter;color:var(--tx3);border:1px solid var(--line2);border-ra
 #mxRec.recording{background:#5a1f22;border-color:#c2383e;color:#ffd0d2}
 #mxRec.recording .rdot{background:#ff4d55;animation:rblink 1s infinite}
 @keyframes rblink{50%{opacity:.25}}
+#mxPr{display:none;align-items:center;gap:6px;flex:none;font-weight:600;color:#c9a8ff;margin-right:8px;height:26px}
+#app.music #mxPr{display:flex}
+#mxPr .prdot{width:7px;height:7px;border-radius:50%;background:#555}
+#mxPr.on .prdot{background:#41c48a}
+#prMenu{position:fixed;z-index:80;display:none;background:var(--p1);border:1px solid var(--line2);border-radius:10px;box-shadow:0 14px 34px rgba(0,0,0,.55);padding:12px;width:330px;flex-direction:column;gap:9px}
+#prMenu .prh{display:flex;justify-content:space-between;align-items:center;gap:8px} #prMenu .prh span{font-size:11.5px;color:var(--tx2);white-space:nowrap}
+#prMenu .prh span.prok{color:var(--green)}
+#prMenu .prseq{font-size:11.5px;color:var(--tx3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#prMenu .prbtns{display:flex;flex-wrap:wrap;gap:6px}
+#prMenu .prrow{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11.5px;color:var(--tx2)}
+#prMenu .prrow .seg button{padding:3px 7px;font-size:11px}
+#prMenu .prnote{font-size:11.5px;color:var(--tx2);line-height:1.45}
+#prMenu .prnote b{color:var(--tx)}
+#prMenu .prfoot{display:flex;justify-content:flex-end;border-top:1px solid var(--line);padding-top:8px}
 #keyMenu{position:fixed;z-index:80;display:none;background:var(--p1);border:1px solid var(--line2);border-radius:10px;box-shadow:0 14px 34px rgba(0,0,0,.55);padding:6px;width:240px}
 #keyMenu .t{font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--tx3);padding:4px 6px}
 #keyMenu button{display:flex;justify-content:space-between;width:100%;padding:6px 8px;border-radius:6px;color:var(--tx2)}
@@ -359,6 +373,7 @@ kbd{font:500 10px Inter;color:var(--tx3);border:1px solid var(--line2);border-ra
       <button data-v="compare" title="Before / after split on this frame (2)">Compare</button>
       <button data-v="result" title="Result on this frame (3)">Result</button>
     </div>
+    <button class="minib" id="mxPr" title="Premiere Pro link: send mixes and markers straight into your edit"><i class="prdot"></i>Premiere</button>
     <div class="iconbar"><button class="ib" id="helpBtn" title="Help (?)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 015 0c0 1.7-2.5 2-2.5 4"/><path d="M12 17h.01"/></svg></button><button class="ib" id="setBtn" title="Settings (⌘,)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg></button></div>
     <button class="btn gold" id="exportBtn" disabled title="Remove captions and save a clean copy (⌘E)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"><path d="M4 20L15 9"/><path d="M14 4v3M12.5 5.5h3M19 9v3M17.5 10.5h3M19 3l.01 0"/></svg>Remove captions</button>
   </header>
@@ -464,6 +479,14 @@ kbd{font:500 10px Inter;color:var(--tx3);border:1px solid var(--line2);border-ra
 </div>
 <input type="file" id="mFile" accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.flac,.ogg,.aiff,.aif" hidden multiple>
 <div id="keyMenu"></div>
+<div id="prMenu">
+  <div class="prh"><b>Premiere Pro</b><span id="prState">—</span></div>
+  <div class="prseq" id="prSeq"></div>
+  <div class="prbtns"><button class="btn sm gold" data-send="A">Send Deck A</button><button class="btn sm" data-send="B">Send Deck B</button><button class="btn sm" data-send="rec">Send last recording</button></div>
+  <div class="prrow"><span>Markers</span><div class="seg" id="prMk"><button data-v="none">None</button><button data-v="phrases">Phrases</button><button data-v="bars">Bars</button><button data-v="beats">Beats</button></div></div>
+  <div class="prnote" id="prNote"></div>
+  <div class="prfoot"><button class="minib" id="prInstall">Install panel in Premiere…</button></div>
+</div>
 
 <input type="file" id="file" accept="video/*,.mov,.mxf,.mkv,.avi,.m4v,.webm" hidden>
 
@@ -1541,6 +1564,42 @@ function setQuant(on){ QUANT=on; $('mxQ').classList.toggle('on',on); Object.valu
 $('mxQ').onclick=()=>{ setQuant(!QUANT); api('/api/settings',{quantize:QUANT}).catch(()=>{}); toast(QUANT?'Quantize on: cues and loops snap to the beat':'Quantize off'); };
 $('mxRec').onclick=()=>recToggle();
 fetch('/api/settings').then(r=>r.json()).then(st=>setQuant(st.quantize!==false)).catch(()=>{});
+
+// ---------- Premiere Pro link
+const PR={st:null,mk:'bars',open:false,wait:{}};
+async function prPoll(){ try{ PR.st=await (await fetch('/api/link/status')).json(); }catch(e){ return; }
+  const st=PR.st; $('mxPr').classList.toggle('on',!!st.connected);
+  $('mxPr').title=st.connected?`Premiere Pro connected${st.seq?' · '+st.seq.name:''}`:'Premiere Pro link: send mixes and markers straight into your edit';
+  for(const [id,label] of Object.entries(PR.wait)){ const r=st.results[id]; if(!r) continue; delete PR.wait[id];
+    toast(r.ok?`Premiere: ${r.fresh?'added':'updated'} ${label}${r.placed?'':' (in the Tru Studio bin)'}${r.markers?` · ${r.markers} markers`:''}`:`Premiere: ${r.error}`); }
+  if(PR.open) prRender(); }
+function prRender(){ const st=PR.st||{}, m=$('prMenu');
+  const state=$('prState'); state.textContent=st.connected?'● Connected':st.installed?'Not connected':'Panel not installed'; state.className=st.connected?'prok':'';
+  $('prSeq').textContent=st.connected?(st.seq?`${st.project||''} › ${st.seq.name} · ${fmtS(st.seq.end)} · playhead ${fmtS(st.seq.playhead)}`:'No sequence open in Premiere'):'';
+  m.querySelectorAll('[data-send]').forEach(b=>{ const k=b.dataset.send; b.disabled=k==='rec'?!st.has_rec:!(DECKS[k]&&DECKS[k].t); });
+  m.querySelectorAll('#prMk button').forEach(b=>b.classList.toggle('on',b.dataset.v===PR.mk));
+  $('prNote').innerHTML=st.connected?'Sends the deck as you hear it (key, tempo, stems kept) to the open sequence at the playhead. <b>Send again after a change and it updates in place.</b> Your cues come along as markers.'
+    :st.installed?'In Premiere Pro: <b>Window › Extensions › Tru Studio Link</b>. If it isn\'t listed, quit and reopen Premiere.'
+    :'Install the panel once, then restart Premiere Pro and open <b>Window › Extensions › Tru Studio Link</b>.';
+  $('prInstall').textContent=st.installed?'Reinstall panel':'Install panel in Premiere…'; }
+function prToggle(open){ const m=$('prMenu'); PR.open=open??!PR.open; if(!PR.open){ m.style.display='none'; return; }
+  const r=$('mxPr').getBoundingClientRect(); m.style.display='flex'; prRender();
+  m.style.left=Math.max(8,Math.min(innerWidth-338,r.right-330))+'px';
+  if(r.top>330){ m.style.top='auto'; m.style.bottom=(innerHeight-r.top+8)+'px'; } else { m.style.bottom='auto'; m.style.top=(r.bottom+8)+'px'; } }
+async function prSend(which){ const body={markers:PR.mk};
+  if(which==='rec') body.kind='rec';
+  else { const d=DECKS[which]; if(!d||!d.t) return; Object.assign(body,{kind:'deck',id:d.t.id,semis:d.semis,ratio:d.rate,gains:d.effGains(),hot:d.hot}); }
+  const b=$('prMenu').querySelector(`[data-send="${which}"]`), txt=b.textContent; b.disabled=true; b.textContent='Rendering…';
+  try{ const r=await api('/api/link/send',body); const d=await r.json(); if(!r.ok) throw new Error(d.detail||'failed');
+    PR.wait[d.id]=d.label.replace(/^Tru · /,''); toast(d.connected?`Sending to Premiere: ${PR.wait[d.id]}…`:`Ready for Premiere: ${PR.wait[d.id]}. Open the Tru Studio Link panel in Premiere to receive it.`); }
+  catch(e){ toast('Send to Premiere: '+e.message); } finally{ b.textContent=txt; prRender(); } }
+$('mxPr').onclick=e=>{ e.stopPropagation(); prToggle(); };
+$('prMenu').addEventListener('click',e=>{ e.stopPropagation(); const s=e.target.closest('[data-send]'); if(s) return prSend(s.dataset.send);
+  const m=e.target.closest('#prMk button'); if(m){ PR.mk=m.dataset.v; api('/api/settings',{link_markers:PR.mk}).catch(()=>{}); prRender(); } });
+$('prInstall').onclick=async e=>{ e.stopPropagation(); try{ const d=await (await api('/api/link/install',{})).json(); toast('Panel installed. Restart Premiere Pro, then open Window › Extensions › Tru Studio Link.'); prPoll(); }catch(err){ toast('Install failed: '+err.message); } };
+document.addEventListener('click',()=>{ if(PR.open) prToggle(false); });
+fetch('/api/settings').then(r=>r.json()).then(st=>{ PR.mk=st.link_markers||'bars'; }).catch(()=>{});
+setInterval(prPoll,1500); prPoll();
 
 // ---------- on-screen keyboard: check a key by ear
 let KB_LAST='';

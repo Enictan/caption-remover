@@ -30,7 +30,7 @@ import updater
 import voice
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-VERSION = "1.7.0"
+VERSION = "1.8.0"
 NATIVE = False  # set when running inside the native window
 _home = os.path.expanduser("~")
 _vids = "Movies" if sys.platform == "darwin" else "Videos"
@@ -64,6 +64,7 @@ DEFAULT_SETTINGS = {
     "keys_type": False,             # play notes from the computer keyboard
     "keys_vol": 0.6,
     "quantize": True,               # Music: hot cues, loops and jumps snap to the beat
+    "link_markers": "bars",         # Premiere link markers: none | phrases | bars | beats
 }
 
 
@@ -773,7 +774,172 @@ def rec_stop(rid: str):
     os.makedirs(d, exist_ok=True)
     out = os.path.join(d, "Mix " + datetime.datetime.now().strftime("%Y-%m-%d %H.%M.%S") + ".wav")
     sf.write(out, np.clip(a, -1, 1), r["sr"], subtype="PCM_24")
+    LINK["last_rec"] = out
     return {"output": out, "filename": os.path.basename(out), "seconds": len(a) / r["sr"]}
+
+
+# ---- Tru Studio Link: a panel inside Premiere Pro polls these and applies new / updated mixes + markers
+LINK_FILE = os.path.join(_home, ".caption-remover-link.json")
+LINK = {"token": uuid.uuid4().hex, "seen": 0.0, "seq": None, "project": None, "queue": [], "results": {}, "last_rec": None}
+PREMIERE_DIR = os.path.join(APP_DIR, "premiere", "TruStudioLink")
+
+
+def _write_link_file(port):
+    import json
+    try:
+        with open(LINK_FILE, "w", encoding="utf-8") as f:
+            json.dump({"port": port, "token": LINK["token"], "app": "Caption Remover", "version": VERSION}, f)
+    except OSError as e:
+        print("link file:", e)
+
+
+def _link_auth(request: Request):
+    if request.query_params.get("k") != LINK["token"]:
+        raise HTTPException(403, "bad token")
+
+
+def _link_json(data):
+    return JSONResponse(data, headers={"Access-Control-Allow-Origin": "*"})
+
+
+@app.post("/api/link/poll")
+async def link_poll(request: Request):
+    import json
+    _link_auth(request)
+    try:
+        body = json.loads((await request.body()) or b"{}")
+    except ValueError:
+        body = {}
+    LINK.update(seen=time.time(), seq=body.get("seq"), project=body.get("project"))
+    out, LINK["queue"] = LINK["queue"], []
+    return _link_json({"actions": out})
+
+
+@app.post("/api/link/ack")
+async def link_ack(request: Request):
+    import json
+    _link_auth(request)
+    body = json.loads((await request.body()) or b"{}")
+    LINK["results"][body.get("id")] = dict(body.get("result") or {}, at=time.time())
+    return _link_json({"ok": True})
+
+
+def _panel_dest():
+    if sys.platform == "darwin":
+        return os.path.join(_home, "Library", "Application Support", "Adobe", "CEP", "extensions", "TruStudioLink")
+    return os.path.join(os.environ.get("APPDATA") or os.path.join(_home, "AppData", "Roaming"), "Adobe", "CEP", "extensions", "TruStudioLink")
+
+
+def _panel_installed():
+    p = os.path.join(_panel_dest(), "CSXS", "manifest.xml")
+    if not os.path.exists(p):
+        return False
+    src = os.path.join(PREMIERE_DIR, "host.jsx")
+    try:   # same version as the one we ship?
+        return open(src, "rb").read() == open(os.path.join(_panel_dest(), "host.jsx"), "rb").read()
+    except OSError:
+        return False
+
+
+@app.get("/api/link/status")
+def link_status():
+    pending = [a["id"] for a in LINK["queue"]]
+    return {"connected": time.time() - LINK["seen"] < 3.5, "seq": LINK["seq"], "project": LINK["project"],
+            "installed": _panel_installed(), "results": LINK["results"], "pending": pending,
+            "has_rec": bool(LINK["last_rec"] and os.path.exists(LINK["last_rec"]))}
+
+
+@app.post("/api/link/install")
+def link_install():
+    """Copy the panel into Adobe's extensions folder and allow unsigned panels (CEP debug mode)."""
+    import subprocess
+    dest = _panel_dest()
+    if os.path.isdir(dest):
+        shutil.rmtree(dest, ignore_errors=True)
+    shutil.copytree(PREMIERE_DIR, dest)
+    for v in range(9, 13):
+        try:
+            if sys.platform == "darwin":
+                subprocess.run(["defaults", "write", f"com.adobe.CSXS.{v}", "PlayerDebugMode", "1"], check=False)
+            elif os.name == "nt":
+                subprocess.run(["reg", "add", rf"HKCU\Software\Adobe\CSXS.{v}", "/v", "PlayerDebugMode", "/t", "REG_SZ", "/d", "1", "/f"],
+                               check=False, capture_output=True)
+        except Exception as e:  # noqa
+            print("CEP debug mode:", e)
+    return {"ok": True, "path": dest}
+
+
+def _link_markers(beats, ratio, hot, density):
+    """Marker list in the rendered file's time (seconds), Premiere colour indexes:
+    0 green, 1 red, 2 purple, 3 orange, 4 yellow, 5 white, 6 blue, 7 cyan."""
+    out = []
+    step = {"beats": 1, "bars": 4, "phrases": 16}.get(density)
+    if step and beats:
+        for i in range(0, len(beats), step):
+            n = i // step + 1
+            label = "" if density == "beats" else (f"Bar {n}" if density == "bars" else f"Phrase {n}")
+            out.append({"t": round(beats[i] / ratio, 4), "name": label, "color": 5 if density != "phrases" else 3})
+    hot_cols = [1, 3, 4, 0, 7, 6, 2, 5]
+    for k, v in enumerate(hot or []):
+        if v is not None:
+            out.append({"t": round(float(v) / ratio, 4), "name": f"Cue {k + 1}", "color": hot_cols[k % 8]})
+    return out
+
+
+def _link_file(label, src, sr=48000):
+    """Video-friendly copy (48 kHz, 24-bit) under a new name each time, so Premiere always reloads it."""
+    import soundfile as sf
+    import music
+    d = os.path.join(out_dir(), "Music", "Premiere")
+    os.makedirs(d, exist_ok=True)
+    safe = "".join(ch for ch in label if ch not in '\\/:*?"<>|').strip() or "mix"
+    old = sorted(f for f in os.listdir(d) if f.startswith(safe + " v") and f.endswith(".wav"))
+    ver = 1 + max([int(f[len(safe) + 2:-4]) for f in old if f[len(safe) + 2:-4].isdigit()] or [0])
+    dst = os.path.join(d, f"{safe} v{ver}.wav")
+    a, in_sr = sf.read(src, dtype="float32", always_2d=True)
+    if in_sr != sr:
+        import soxr
+        a = soxr.resample(a, in_sr, sr, quality="VHQ")
+    sf.write(dst, np.clip(a, -1, 1), sr, subtype="PCM_24")
+    for f in old[:-2]:   # keep the last few versions only
+        try:
+            os.remove(os.path.join(d, f))
+        except OSError:
+            pass
+    return dst, len(a) / sr
+
+
+@app.post("/api/link/send")
+def link_send(body: dict):
+    import music
+    density = body.get("markers", "bars")
+    if body.get("kind") == "rec":
+        src = LINK["last_rec"]
+        if not src or not os.path.exists(src):
+            raise HTTPException(400, "Record a mix first")
+        label = "Tru · " + os.path.splitext(os.path.basename(src))[0]
+        beats = []
+        if density != "none":
+            try:
+                beats = music.analyse(src).get("beats") or []
+            except Exception:
+                beats = []
+        path, dur = _link_file(label, src)
+        markers = _link_markers(beats, 1.0, None, density) if density != "none" else []
+    else:
+        t = _track(body["id"])
+        semis, ratio = float(body.get("semis", 0)), float(body.get("ratio", 1.0))
+        gains = body.get("gains") or {}
+        use_stems = t.get("stems") if gains else None
+        tmp = os.path.join(MUSIC_DIR, f"link_{t['id']}.wav")
+        music.render_mix(use_stems, t["path"], tmp, gains, semis, ratio)
+        label = "Tru · " + t["name"]
+        path, dur = _link_file(label, tmp)
+        os.remove(tmp)
+        markers = _link_markers(t.get("beats") or [], ratio, body.get("hot"), density) if density != "none" else []
+    aid = uuid.uuid4().hex[:8]
+    LINK["queue"].append({"id": aid, "label": label, "path": path, "dur": dur, "insert": True, "markers": markers})
+    return {"id": aid, "label": label, "path": path, "markers": len(markers), "connected": time.time() - LINK["seen"] < 3.5}
 
 
 @app.get("/favicon.ico")
@@ -1184,6 +1350,7 @@ def main():
     import uvicorn
     port = int(os.environ.get("PORT") or _free_port())
     url = f"http://127.0.0.1:{port}"
+    _write_link_file(port)
     threading.Thread(target=_warm, daemon=True).start()
     server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning"))
 
