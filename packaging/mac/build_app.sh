@@ -17,6 +17,7 @@ cp "$ROOT/packaging/icon/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
 cp "$ROOT/app.py" "$ROOT/engine.py" "$ROOT/music.py" "$ROOT/updater.py" "$ROOT/macapp.py" "$ROOT/voice.py" "$ROOT/voice_worker.py" "$ROOT/requirements.txt" "$APP/Contents/Resources/app/"
 [ -f "$ROOT/update.json" ] && cp "$ROOT/update.json" "$APP/Contents/Resources/app/"
 cp "$ROOT/static/index.html" "$ROOT/static/voice.html" "$APP/Contents/Resources/app/static/"
+mkdir -p "$APP/Contents/Resources/app/static/vendor" && cp "$ROOT/static/vendor/"*.js "$APP/Contents/Resources/app/static/vendor/"
 printf 'APPL????' > "$APP/Contents/PkgInfo"
 
 echo "Built: $APP  (v$VERSION)"

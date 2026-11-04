@@ -30,7 +30,7 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 DIST = os.path.join(ROOT, "dist")
 CONF = os.path.join(ROOT, "packaging", "release.json")
 CODE_FILES = ["app.py", "engine.py", "music.py", "updater.py", "macapp.py", "voice.py", "voice_worker.py", "update.json",
-              "requirements.txt", "static/index.html", "static/voice.html"]
+              "requirements.txt", "static/index.html", "static/voice.html", "static/vendor/SignalsmithStretch.js"]
 KEEP_OLD = 5  # old versions kept in the updates repo
 
 

@@ -25,6 +25,9 @@ NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 # Camelot wheel numbers for major / minor roots (C major = 8B, A minor = 8A)
 CAM_MAJ = {0: 8, 7: 9, 2: 10, 9: 11, 4: 12, 11: 1, 6: 2, 1: 3, 8: 4, 3: 5, 10: 6, 5: 7}
 CAM_MIN = {9: 8, 4: 9, 11: 10, 6: 11, 1: 12, 8: 1, 3: 2, 10: 3, 5: 4, 0: 5, 7: 6, 2: 7}
+# Temperley (Kostka-Payne) profiles: a second opinion that is less biased towards the tonic triad
+TP_MAJ = np.array([5.0, 2.0, 3.5, 2.0, 4.5, 4.0, 2.0, 4.5, 2.0, 3.5, 1.5, 4.0])
+TP_MIN = np.array([5.0, 2.0, 3.5, 4.5, 2.0, 4.0, 2.0, 4.5, 3.5, 2.0, 1.5, 4.0])
 # Krumhansl-Kessler key profiles
 KK_MAJ = np.array([6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88])
 KK_MIN = np.array([6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17])
@@ -103,24 +106,29 @@ def _chroma(y, fmin, octaves):
     return np.log1p(10 * c / (c.max(0, keepdims=True) + 1e-9))   # per-frame compression
 
 
-def _key(y, beats=None):
+def _key(y, beats=None, harm=None, bass_sig=None):
     """Key from harmony above the sub-bass (kick drums fool chroma), then major vs relative minor
-    from where the bass rests: overall, and at the very start and end of the song."""
+    from where the bass rests: overall, and at the very start and end of the song.
+    With stems: `harm` = vocals + bass + other (no drums), `bass_sig` = the bass stem."""
     import librosa
-    harm = librosa.effects.harmonic(y, margin=3.0)
+    if harm is None:
+        harm = librosa.effects.harmonic(y, margin=3.0)
     prof = _chroma(harm, "C2", 5).mean(1)
     scores = []
-    for minor, kp in ((False, KK_MAJ), (True, KK_MIN)):
+    for minor, kk, tp in ((False, KK_MAJ, TP_MAJ), (True, KK_MIN, TP_MIN)):
         for r in range(12):
-            scores.append((float(np.corrcoef(prof, np.roll(kp, r))[0, 1]), r, minor))
+            c = 0.5 * np.corrcoef(prof, np.roll(kk, r))[0, 1] + 0.5 * np.corrcoef(prof, np.roll(tp, r))[0, 1]
+            scores.append((float(c), r, minor))
     scores.sort(reverse=True)
     best = scores[0]
     # relative pair: same notes, different tonic
     maj_root = best[1] if not best[2] else (best[1] + 3) % 12
     min_root = (maj_root - 3) % 12
-    import librosa as _lr
-    harm_b = _lr.effects.harmonic(y, margin=8.0)      # stricter: drums out of the bass
-    bass = _chroma(harm_b, "C2", 2)                   # ~65-260 Hz: above kick drums, where bass lines sit
+    if bass_sig is not None:                          # a clean bass stem: use its whole range
+        bass = _chroma(bass_sig, "C1", 3)
+    else:
+        harm_b = librosa.effects.harmonic(y, margin=8.0)  # stricter: drums out of the bass
+        bass = _chroma(harm_b, "C2", 2)               # ~65-260 Hz: above kick drums, where bass lines sit
     n = bass.shape[1]
     fr = lambda t: int(t * AN_SR / 2048)
     if beats is not None and len(beats) > 8:
@@ -130,6 +138,12 @@ def _key(y, beats=None):
     else:
         first, last = bass[:, :max(1, n // 20)], bass[:, -max(1, n // 20):]
     w = bass.mean(1) + 1.0 * first.mean(1) + 0.6 * last.mean(1)
+    if beats is not None and len(beats) > 40:
+        # songs come home at phrase starts: bass on the first beat of every 4-bar phrase
+        b = np.asarray(beats)
+        cols = [bass[:, fr(b[i]):max(fr(b[i]) + 1, fr(b[min(i + 1, len(b) - 1)]))].mean(1) for i in range(0, len(b) - 1, 16)]
+        if cols:
+            w = w + 1.5 * np.mean(cols, 0)
     h = prof
     tonic_maj = w[maj_root] + 0.5 * h[maj_root]
     tonic_min = w[min_root] + 0.5 * h[min_root]
@@ -173,10 +187,21 @@ def _tempo(y):
 
 
 def analyse(path: str) -> dict:
-    y = decode(path, AN_SR, mono=True, max_sec=240)[0]
+    y = decode(path, AN_SR, mono=True, max_sec=900)[0]
     dur = duration(path)
     bpm, beats, tconf = _tempo(y)
     root, minor, kconf, mconf, alt, nxt = _key(y, beats)
+    out = _key_fields(root, minor, kconf, mconf, nxt)
+    out.update({
+        "bpm": round(bpm, 1), "tempo_conf": round(tconf, 2), "duration": round(dur, 2),
+        "beats": [round(float(b), 3) for b in beats[:20000]],
+        "hot_start": hot_start(path, 30.0, beats), "key_source": "mix",
+    })
+    out.update(_tags(path))
+    return out
+
+
+def _key_fields(root, minor, kconf, mconf, nxt, cap=True):
     mode = "minor" if minor else "major"
     rt, rm = _relative(root, mode)
     alts = [{"tonic": rt, "mode": rm, "key": key_name(rt, rm) + " (same notes)", "camelot": camelot(rt, rm)}]
@@ -185,15 +210,23 @@ def analyse(path: str) -> dict:
         alts.append({"tonic": nxt[0], "mode": nm, "key": key_name(nxt[0], nm), "camelot": camelot(nxt[0], nm)})
     # Major vs relative minor on a looping progression is genuinely ambiguous, so never claim
     # "confident" on that alone: the note set (what decides the transpose) is the reliable part.
-    conf = min(kconf, 0.45 + 0.2 * mconf)          # at most 'fairly sure' until you confirm it
-    out = {
-        "bpm": round(bpm, 1), "tempo_conf": round(tconf, 2),
-        "tonic": root, "mode": mode, "key": key_name(root, mode), "camelot": camelot(root, mode),
-        "key_conf": round(conf, 2), "key_alts": alts, "duration": round(dur, 2),
-        "beats": [round(float(b), 3) for b in beats[:4000]],
-        "hot_start": hot_start(path, 30.0, beats),
-    }
-    out.update(_tags(path))
+    conf = min(kconf, 0.45 + 0.2 * mconf) if cap else min(kconf, 0.5 + 0.35 * mconf)
+    return {"tonic": root, "mode": mode, "key": key_name(root, mode), "camelot": camelot(root, mode),
+            "key_conf": round(conf, 2), "key_alts": alts}
+
+
+def key_from_stems(stems: dict, beats) -> dict:
+    """Re-detect the key with drums removed and a clean bass line for the tonic."""
+    harm = None
+    for name, p in stems.items():
+        if name == "drums":
+            continue
+        a = decode(p, AN_SR, mono=True, max_sec=900)[0]
+        harm = a if harm is None else harm[: len(a)] + a[: len(harm)]
+    bass = decode(stems["bass"], AN_SR, mono=True, max_sec=900)[0] if "bass" in stems else None
+    root, minor, kconf, mconf, alt, nxt = _key(None, beats, harm=harm, bass_sig=bass)
+    out = _key_fields(root, minor, kconf, mconf, nxt, cap=False)
+    out["key_source"] = "stems"
     return out
 
 
@@ -223,6 +256,25 @@ def hot_start(path: str, length: float, beats) -> float:
     c = np.convolve(rms, np.ones(w), "valid")
     t = float(np.argmax(c)) / 4
     return round(_snap(t, beats), 3)
+
+
+def peaks(path: str, per_sec: int = 50) -> dict:
+    """Waveform for the decks: overall peak plus low / mid / high energy, `per_sec` columns a second."""
+    import librosa
+    y = decode(path, AN_SR, mono=True, max_sec=900)[0]
+    hop = AN_SR // per_sec
+    S = np.abs(librosa.stft(y, n_fft=2048, hop_length=hop, center=True))
+    f = librosa.fft_frequencies(sr=AN_SR, n_fft=2048)
+    bands = [(f < 250), (f >= 250) & (f < 4000), (f >= 4000)]
+    out = {}
+    for name, sel in zip(("low", "mid", "high"), bands):
+        e = np.sqrt((S[sel] ** 2).sum(0))
+        out[name] = e
+    n = min(len(out["low"]), len(y) // hop + 1)
+    pk = np.abs(y[: n * hop]).reshape(-1, hop).max(1) if n * hop <= len(y) else np.abs(np.pad(y, (0, n * hop - len(y)))).reshape(-1, hop).max(1)
+    norm = lambda a: np.round(a[:n] / (np.percentile(a[:n], 99.5) + 1e-9), 3).clip(0, 1)
+    return {"per_sec": per_sec, "peak": norm(pk).tolist(), "low": norm(out["low"]).tolist(),
+            "mid": norm(out["mid"]).tolist(), "high": norm(out["high"]).tolist()}
 
 
 def waveform(path: str, bins: int = 800) -> list[float]:
@@ -332,3 +384,145 @@ def render(src: str, dst: str, start: float = 0.0, length: float | None = 30.0, 
 def file_id(path: str) -> str:
     st = os.stat(path)
     return hashlib.sha1(f"{path}|{st.st_size}|{st.st_mtime}".encode()).hexdigest()[:12]
+
+
+# ------------------------------------------------------------------ stems (Demucs)
+STEM_MODELS = {
+    "htdemucs": {"label": "4 stems", "stems": ["vocals", "drums", "bass", "other"]},
+    "htdemucs_6s": {"label": "6 stems (adds guitar & piano)", "stems": ["vocals", "drums", "bass", "guitar", "piano", "other"]},
+    "htdemucs_ft": {"label": "4 stems, best quality (about 4x slower)", "stems": ["vocals", "drums", "bass", "other"]},
+}
+_models = {}
+_mlock = threading.Lock()
+
+
+def _torch_device():
+    import torch
+    if torch.cuda.is_available():
+        return "cuda"
+    if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
+        return "mps"
+    return "cpu"
+
+
+def content_id(path: str) -> str:
+    """Same song file -> same id, wherever it was loaded from (for the stems cache)."""
+    h = hashlib.sha1()
+    size = os.path.getsize(path)
+    with open(path, "rb") as f:
+        h.update(f.read(1 << 20))
+        if size > 2 << 20:
+            f.seek(size - (1 << 20))
+            h.update(f.read(1 << 20))
+    h.update(str(size).encode())
+    return h.hexdigest()[:16]
+
+
+def stems_dir(cache_root: str, path: str, model: str) -> str:
+    return os.path.join(cache_root, content_id(path), model)
+
+
+def cached_stems(cache_root: str, path: str, model: str):
+    d = stems_dir(cache_root, path, model)
+    names = STEM_MODELS[model]["stems"]
+    files = {n: os.path.join(d, n + ".flac") for n in names}
+    return files if all(os.path.exists(p) for p in files.values()) else None
+
+
+def _load_model(name, models_dir):
+    with _mlock:
+        if name not in _models:
+            import torch
+            os.environ.setdefault("TORCH_HOME", models_dir)
+            torch.hub.set_dir(os.path.join(models_dir, "hub"))
+            from demucs.pretrained import get_model
+            m = get_model(name)
+            m.eval()
+            _models[name] = m
+    return _models[name]
+
+
+def split_stems(path: str, cache_root: str, models_dir: str, model: str = "htdemucs", progress=None, cancelled=None):
+    """Separate a song into stems with Demucs. Cached per song + model. Returns {stem: flac path}."""
+    import soundfile as sf
+    import torch
+    from demucs import apply as dapply
+    from demucs.apply import apply_model
+
+    hit = cached_stems(cache_root, path, model)
+    if hit:
+        return hit
+    progress = progress or (lambda f, msg: None)
+    progress(0.0, "Loading the stem model (downloads once, about 80 MB)…")
+    m = _load_model(model, models_dir)
+    dev = _torch_device()
+    progress(0.02, "Splitting…")
+
+    class _Bar:  # Demucs reports progress through tqdm: route it to our callback
+        def __init__(self, it=None, total=None, **kw):
+            self.it = list(it) if it is not None else []
+            self.total = total or len(self.it) or 1
+
+        def __iter__(self):
+            for k, x in enumerate(self.it):
+                if cancelled and cancelled():
+                    raise InterruptedError
+                progress(0.02 + 0.93 * k / max(1, len(self.it)), "Splitting…")
+                yield x
+
+    orig = dapply.tqdm.tqdm
+    dapply.tqdm.tqdm = _Bar
+    try:
+        wav = torch.from_numpy(audio(path))
+        ref = wav.mean(0)
+        mean, std = ref.mean(), ref.std() + 1e-8
+        x = ((wav - mean) / std)[None]
+        try:
+            with torch.no_grad():
+                out = apply_model(m, x.to(dev), device=dev, shifts=1, split=True, overlap=0.25, progress=True)
+        except (RuntimeError, NotImplementedError):          # e.g. an op missing on the GPU: use the CPU
+            if dev == "cpu":
+                raise
+            with torch.no_grad():
+                out = apply_model(m, x, device="cpu", shifts=1, split=True, overlap=0.25, progress=True)
+        out = (out[0] * std + mean).cpu().numpy()
+    finally:
+        dapply.tqdm.tqdm = orig
+    progress(0.96, "Saving stems…")
+    d = stems_dir(cache_root, path, model)
+    os.makedirs(d, exist_ok=True)
+    files = {}
+    for i, name in enumerate(m.sources):
+        p = os.path.join(d, name + ".flac")
+        sf.write(p + ".part.flac", np.clip(out[i].T, -1, 1), SR, subtype="PCM_16")
+        os.replace(p + ".part.flac", p)
+        files[name] = p
+    progress(1.0, "Done")
+    return {n: files[n] for n in STEM_MODELS[model]["stems"] if n in files}
+
+
+def render_mix(stems: dict | None, mix_path: str, dst: str, gains: dict, semis: float, ratio: float) -> str:
+    """Whole song (or the stems you kept, at their volumes), transposed + tempo-changed, as 24-bit WAV."""
+    import soundfile as sf
+    if stems:
+        acc = None
+        for name, p in stems.items():
+            g = float(gains.get(name, 1.0))
+            if g <= 0.001:
+                continue
+            a = audio(p) * g
+            acc = a if acc is None else acc[:, : a.shape[1]] + a[:, : acc.shape[1]]
+        if acc is None:
+            raise RuntimeError("All stems are muted")
+        a = acc
+    else:
+        a = audio(mix_path)
+    if abs(ratio - 1) > 1e-4 or abs(semis) > 1e-4:
+        from pedalboard import time_stretch
+        a = time_stretch(np.ascontiguousarray(a, dtype=np.float32), SR, stretch_factor=float(ratio),
+                         pitch_shift_in_semitones=float(semis), high_quality=True, transient_mode="crisp",
+                         preserve_formants=True)
+    tmp = dst + ".part.wav"
+    sf.write(tmp, np.clip(a.T, -1, 1), SR, subtype="PCM_24")
+    os.replace(tmp, dst)
+    return dst

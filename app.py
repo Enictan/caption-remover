@@ -30,7 +30,7 @@ import updater
 import voice
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-VERSION = "1.4.0"
+VERSION = "1.5.0"
 NATIVE = False  # set when running inside the native window
 _home = os.path.expanduser("~")
 _vids = "Movies" if sys.platform == "darwin" else "Videos"
@@ -56,6 +56,7 @@ DEFAULT_SETTINGS = {
     "temporal": True,               # borrow background from nearby frames
     "stabilise": True,
     "detect_every": 3,
+    "stem_model": "htdemucs",       # htdemucs | htdemucs_6s | htdemucs_ft
 }
 
 
@@ -329,7 +330,9 @@ def _track(tid):
 
 
 def _public(t):
-    return {k: v for k, v in t.items() if k not in ("path", "beats")}
+    out = {k: v for k, v in t.items() if k not in ("path", "stems", "_peaks")}
+    out["stem_names"] = list((t.get("stems") or {}).keys())
+    return out
 
 
 @app.post("/api/music/upload")
@@ -353,6 +356,15 @@ async def music_upload(file: UploadFile = File(...)):
         name = a["title"] + (f" · {a['artist']}" if a.get("artist") else "")
     t = dict(a, id=tid, name=name, path=path, detected={"tonic": a["tonic"], "mode": a["mode"]})
     tracks[tid] = t
+    try:
+        st = load_settings().get("stem_model", "htdemucs")
+        hit = music.cached_stems(os.path.join(SUPPORT, "stems"), path, st)
+        if hit:
+            t["stems"], t["stems_model"] = hit, st
+            t.update(music.key_from_stems(hit, t["beats"]))
+            _stem_jobs[tid] = {"state": "done", "progress": 1.0, "message": "Done", "model": st}
+    except Exception:
+        pass
     return _public(t)
 
 
@@ -361,7 +373,8 @@ def music_set_key(tid: str, body: dict):
     import music
     t = _track(tid)
     tonic, mode = int(body["tonic"]) % 12, body["mode"]
-    t.update(tonic=tonic, mode=mode, key=music.key_name(tonic, mode), camelot=music.camelot(tonic, mode), key_conf=1.0)
+    t.update(tonic=tonic, mode=mode, key=music.key_name(tonic, mode), camelot=music.camelot(tonic, mode), key_conf=1.0,
+             key_user=True, key_source="you")
     rt, rm = music._relative(tonic, mode)
     t["key_alts"] = [{"tonic": rt, "mode": rm, "key": music.key_name(rt, rm) + " (same notes)", "camelot": music.camelot(rt, rm)}]
     return _public(t)
@@ -440,6 +453,177 @@ def music_reveal(body: dict):
     if p and os.path.exists(p) and os.path.dirname(os.path.abspath(p)) == os.path.abspath(out_dir()):
         _open(p, reveal=True)
     return {"ok": True}
+
+
+# ---- decks: full song, waveform, stems, save
+STEMS_CACHE = os.path.join(SUPPORT, "stems")
+_stem_pool = None
+_stem_jobs: dict[str, dict] = {}
+
+
+@app.get("/api/music/audio/{tid}")
+def music_audio(tid: str, wav: int = 0):
+    t = _track(tid)
+    if wav:   # for formats the window can't decode itself
+        import music
+        p = os.path.join(MUSIC_DIR, f"full_{tid}.wav")
+        if not os.path.exists(p):
+            music.render(t["path"], p, 0, None, 0, 1.0, fade=False)
+        return FileResponse(p, media_type="audio/wav")
+    return FileResponse(t["path"])
+
+
+@app.get("/api/music/peaks/{tid}")
+def music_peaks(tid: str):
+    import music
+    t = _track(tid)
+    if "_peaks" not in t:
+        t["_peaks"] = music.peaks(t["path"], 50)
+    return t["_peaks"]
+
+
+def _stem_public(tid):
+    t = tracks.get(tid) or {}
+    j = _stem_jobs.get(tid, {"state": "none"})
+    out = {k: j.get(k) for k in ("state", "progress", "message", "model", "error")}
+    if t.get("stems"):
+        out["stems"] = list(t["stems"].keys())
+        out["state"] = "done"
+        out["model"] = t.get("stems_model")
+    out["track"] = _public(t) if t else None
+    return out
+
+
+def _run_stems(tid, model):
+    import music
+    t = tracks.get(tid)
+    j = _stem_jobs[tid]
+    try:
+        def prog(f, msg):
+            j.update(progress=round(f, 3), message=msg)
+        files = music.split_stems(t["path"], STEMS_CACHE, os.path.join(engine.MODEL_DIR, "torch"), model, prog,
+                                  lambda: j.get("cancel"))
+        t["stems"], t["stems_model"] = files, model
+        j.update(message="Checking the key with the stems…", progress=0.99)
+        if not t.get("key_user"):
+            try:
+                t.update(music.key_from_stems(files, t["beats"]))
+            except Exception as e:  # noqa
+                print("stem key failed:", e)
+        j.update(state="done", progress=1.0, message="Done")
+    except InterruptedError:
+        j.update(state="cancelled", message="Cancelled")
+    except Exception as e:  # noqa
+        import traceback
+        traceback.print_exc()
+        msg = str(e)
+        if "No module named 'demucs'" in msg:
+            msg = "The stem splitter isn't installed yet. Restart the app to finish its update."
+        elif "urlopen" in msg or "HTTP Error" in msg or "Connection" in msg:
+            msg = "Couldn't download the stem model. Check your internet connection and try again."
+        j.update(state="error", error=msg, message=msg)
+
+
+@app.post("/api/music/stems/{tid}")
+def music_stems_start(tid: str, body: dict):
+    global _stem_pool
+    import music
+    t = _track(tid)
+    model = body.get("model") or load_settings().get("stem_model", "htdemucs")
+    if model not in music.STEM_MODELS:
+        model = "htdemucs"
+    hit = music.cached_stems(STEMS_CACHE, t["path"], model)
+    if hit:
+        t["stems"], t["stems_model"] = hit, model
+        if not t.get("key_user") and t.get("key_source") != "stems":
+            try:
+                t.update(music.key_from_stems(hit, t["beats"]))
+            except Exception:
+                pass
+        _stem_jobs[tid] = {"state": "done", "progress": 1.0, "message": "Done", "model": model}
+        return _stem_public(tid)
+    j = _stem_jobs.get(tid)
+    if j and j.get("state") in ("queued", "running"):
+        return _stem_public(tid)
+    t.pop("stems", None)
+    if _stem_pool is None:
+        from concurrent.futures import ThreadPoolExecutor
+        _stem_pool = ThreadPoolExecutor(max_workers=1)      # one split at a time: they're heavy
+    _stem_jobs[tid] = {"state": "running", "progress": 0.0, "message": "Waiting for the other split to finish…", "model": model}
+    _stem_pool.submit(_run_stems, tid, model)
+    return _stem_public(tid)
+
+
+@app.get("/api/music/stems/{tid}")
+def music_stems_status(tid: str):
+    _track(tid)
+    return _stem_public(tid)
+
+
+@app.post("/api/music/stems/{tid}/cancel")
+def music_stems_cancel(tid: str):
+    j = _stem_jobs.get(tid)
+    if j:
+        j["cancel"] = True
+    return {"ok": True}
+
+
+@app.get("/api/music/stem/{tid}/{name}")
+def music_stem_file(tid: str, name: str, wav: int = 0):
+    t = _track(tid)
+    p = (t.get("stems") or {}).get(name)
+    if not p or not os.path.exists(p):
+        raise HTTPException(404, "Stem not found")
+    if wav:   # for web views that can't decode FLAC
+        import music
+        w = os.path.join(MUSIC_DIR, f"stem_{tid}_{name}.wav")
+        if not os.path.exists(w):
+            music.render(p, w, 0, None, 0, 1.0, fade=False)
+        return FileResponse(w, media_type="audio/wav")
+    return FileResponse(p, media_type="audio/flac")
+
+
+@app.get("/api/music/stem_models")
+def music_stem_models():
+    import music
+    return {"models": [{"id": k, **v} for k, v in music.STEM_MODELS.items()], "default": load_settings().get("stem_model", "htdemucs")}
+
+
+@app.post("/api/music/save_deck")
+def music_save_deck(body: dict):
+    import music
+    t = _track(body["id"])
+    semis, ratio = float(body.get("semis", 0)), float(body.get("ratio", 1.0))
+    gains = body.get("gains") or {}
+    use_stems = t.get("stems") if gains else None
+    kept = [n for n in (use_stems or {}) if float(gains.get(n, 1)) > 0.001]
+    tag = []
+    if semis:
+        tag.append(f"{semis:+g} st")
+    if abs(ratio - 1) > 1e-4:
+        tag.append(f"{t['bpm'] * ratio:.1f} BPM")
+    tag.append(music.shifted_key(t, int(round(semis)))["key"])
+    if use_stems and len(kept) < len(use_stems):
+        tag.append(" + ".join(kept) if kept else "silent")
+    safe = "".join(ch for ch in t["name"] if ch not in '\\/:*?"<>|').strip() or "song"
+    d = os.path.join(out_dir(), "Music")
+    os.makedirs(d, exist_ok=True)
+    out = os.path.join(d, f"{safe} ({', '.join(tag)}).wav")
+    music.render_mix(use_stems, t["path"], out, gains, semis, ratio)
+    return {"output": out, "filename": os.path.basename(out)}
+
+
+@app.get("/favicon.ico")
+def favicon():
+    return Response(status_code=204)
+
+
+@app.get("/vendor/{name}")
+def vendor_file(name: str):
+    p = os.path.join(APP_DIR, "static", "vendor", os.path.basename(name))
+    if not os.path.exists(p):
+        raise HTTPException(404, "Not found")
+    return FileResponse(p, media_type="text/javascript" if p.endswith(("js", "mjs")) else None)
 
 
 @app.delete("/api/music/{tid}")

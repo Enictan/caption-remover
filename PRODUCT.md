@@ -26,4 +26,5 @@ Current state (v1.0): Mac app for in-house use. It's a small app bundle (~300 KB
 - `voice.py`: installs/starts the Voicebox server (own Python env), and runs transcribe, translate, clone, dub, fix-lines, voiceover and sound jobs. Uses the app's ffmpeg.
 - `voice_worker.py`: runs inside the voice env: starts Voicebox with a parent watchdog, and does Whisper transcription with timestamps.
 - `static/voice.html`: the Voice workspace (shown in a frame over the Clean UI).
+10. **Music licences.** Demucs (MIT, weights from Meta), Signalsmith Stretch (MIT), librosa (ISC). pedalboard bundles Rubber Band (GPL) and is used for saved files; for a closed-source paid product either release that part under GPL, license Rubber Band commercially, or render saved files with Signalsmith instead.
 

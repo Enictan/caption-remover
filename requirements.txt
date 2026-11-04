@@ -10,3 +10,4 @@ pywebview>=5.0
 librosa>=0.10
 pedalboard>=0.9.8
 soundfile>=0.12
+demucs>=4.1
