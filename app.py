@@ -30,7 +30,7 @@ import updater
 import voice
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-VERSION = "1.5.0"
+VERSION = "1.6.0"
 NATIVE = False  # set when running inside the native window
 _home = os.path.expanduser("~")
 _vids = "Movies" if sys.platform == "darwin" else "Videos"
@@ -56,7 +56,13 @@ DEFAULT_SETTINGS = {
     "temporal": True,               # borrow background from nearby frames
     "stabilise": True,
     "detect_every": 3,
-    "stem_model": "htdemucs",       # htdemucs | htdemucs_6s | htdemucs_ft
+    "stem_model": "htdemucs",       # htdemucs | htdemucs_6s | htdemucs_ft | roformer
+    "keys_open": False,             # Music: on-screen keyboard shown
+    "keys_names": True,             # note names on the keys
+    "keys_scale": "sel",            # highlight a deck's key: off | sel | A | B
+    "keys_octave": 3,               # lowest octave shown
+    "keys_type": False,             # play notes from the computer keyboard
+    "keys_vol": 0.6,
 }
 
 

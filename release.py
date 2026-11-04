@@ -30,7 +30,9 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 DIST = os.path.join(ROOT, "dist")
 CONF = os.path.join(ROOT, "packaging", "release.json")
 CODE_FILES = ["app.py", "engine.py", "music.py", "updater.py", "macapp.py", "voice.py", "voice_worker.py", "update.json",
-              "requirements.txt", "static/index.html", "static/voice.html", "static/vendor/SignalsmithStretch.js"]
+              "requirements.txt", "static/index.html", "static/voice.html", "static/vendor/SignalsmithStretch.js",
+              "roformer/__init__.py", "roformer/bs_roformer.py", "roformer/attend.py", "roformer/rotary.py",
+              "roformer/device_utils.py", "roformer/LICENSE"]
 KEEP_OLD = 5  # old versions kept in the updates repo
 
 

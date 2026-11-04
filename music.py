@@ -391,6 +391,18 @@ STEM_MODELS = {
     "htdemucs": {"label": "4 stems", "stems": ["vocals", "drums", "bass", "other"]},
     "htdemucs_6s": {"label": "6 stems (adds guitar & piano)", "stems": ["vocals", "drums", "bass", "guitar", "piano", "other"]},
     "htdemucs_ft": {"label": "4 stems, best quality (about 4x slower)", "stems": ["vocals", "drums", "bass", "other"]},
+    "roformer": {"label": "4 stems, cleanest vocals (one-time 640 MB download)", "stems": ["vocals", "drums", "bass", "other"]},
+}
+# BS-RoFormer vocal model (MIT code, weights from the UVR model repo). Vocals from RoFormer, the rest from Demucs
+# run on what is left once the vocals are taken out.
+ROFORMER = {
+    "ckpt": ("https://github.com/TRvlvr/model_repo/releases/download/all_public_uvr_models/model_bs_roformer_ep_317_sdr_12.9755.ckpt",
+             "5b84f37e8d444c8cb30c79d77f613a41c05868ff9c9ac6c7049c00aefae115aa", 639331213),
+    "chunk": 352800, "overlap": 2,
+    "model": dict(dim=512, depth=12, stereo=True, num_stems=1, time_transformer_depth=1, freq_transformer_depth=1,
+                  freqs_per_bands=(2,) * 24 + (4,) * 12 + (12,) * 8 + (24,) * 8 + (48,) * 8 + (128, 129),
+                  dim_head=64, heads=8, attn_dropout=0.0, ff_dropout=0.0, flash_attn=True, dim_freqs_in=1025,
+                  stft_n_fft=2048, stft_hop_length=441, stft_win_length=2048, stft_normalized=False, mask_estimator_depth=2),
 }
 _models = {}
 _mlock = threading.Lock()
@@ -442,21 +454,84 @@ def _load_model(name, models_dir):
     return _models[name]
 
 
-def split_stems(path: str, cache_root: str, models_dir: str, model: str = "htdemucs", progress=None, cancelled=None):
-    """Separate a song into stems with Demucs. Cached per song + model. Returns {stem: flac path}."""
-    import soundfile as sf
+def _download(url, dst, sha, size, progress, lo, hi, what):
+    import urllib.request
+    if os.path.exists(dst) and os.path.getsize(dst) == size:
+        return dst
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+    tmp, h, got = dst + ".part", hashlib.sha256(), 0
+    with urllib.request.urlopen(url, timeout=60) as r, open(tmp, "wb") as f:
+        while True:
+            b = r.read(1 << 20)
+            if not b:
+                break
+            f.write(b); h.update(b); got += len(b)
+            progress(lo + (hi - lo) * got / size, f"Downloading {what} ({got >> 20} of {size >> 20} MB, once only)…")
+    if h.hexdigest() != sha:
+        os.remove(tmp)
+        raise RuntimeError(f"The {what} download was damaged. Please try again.")
+    os.replace(tmp, dst)
+    return dst
+
+
+def _load_roformer(models_dir, progress):
+    with _mlock:
+        if "roformer" in _models:
+            return _models["roformer"]
+    import torch
+    from roformer.bs_roformer import BSRoformer
+    url, sha, size = ROFORMER["ckpt"]
+    p = _download(url, os.path.join(models_dir, "roformer", "vocals_bs_roformer_317.ckpt"), sha, size, progress, 0.0, 0.25, "the vocal model")
+    m = BSRoformer(**ROFORMER["model"])
+    sd = torch.load(p, map_location="cpu", weights_only=True)
+    m.load_state_dict(sd.get("state_dict", sd) if isinstance(sd, dict) else sd)
+    m.eval()
+    with _mlock:
+        _models["roformer"] = m
+    return m
+
+
+def roformer_vocals(m, wav, dev, progress=None, cancelled=None, lo=0.0, hi=1.0):
+    """wav (2, n) float32 at 44.1 kHz -> vocals (2, n). Overlapping windows, cross-faded."""
+    import torch
+    progress = progress or (lambda f, msg: None)
+    C, step = ROFORMER["chunk"], ROFORMER["chunk"] // ROFORMER["overlap"]
+    fade = C // 10
+    win = np.ones(C, np.float32)
+    win[:fade] = np.linspace(0, 1, fade); win[-fade:] = np.linspace(1, 0, fade)
+    n = wav.shape[1]
+    border = C - step
+    x = np.pad(wav, ((0, 0), (border, border)), mode="reflect" if n > border else "constant")
+    N = x.shape[1]
+    starts = list(range(0, max(1, N - border), step))
+    out, cnt = np.zeros_like(x), np.zeros(N, np.float32)
+    mdev = m.to(dev)
+    for k, s0 in enumerate(starts):
+        if cancelled and cancelled():
+            raise InterruptedError
+        seg = x[:, s0:s0 + C]
+        L = seg.shape[1]
+        if L < C:
+            seg = np.pad(seg, ((0, 0), (0, C - L)))
+        w = win.copy()
+        if s0 == 0:
+            w[:fade] = 1
+        if s0 + C >= N:
+            w[-fade:] = 1
+        with torch.no_grad():
+            y = mdev(torch.from_numpy(np.ascontiguousarray(seg))[None].to(dev))
+        y = y.reshape(-1, 2, C)[0].float().cpu().numpy()
+        out[:, s0:s0 + L] += (y * w)[:, :L]
+        cnt[s0:s0 + L] += w[:L]
+        progress(lo + (hi - lo) * (k + 1) / len(starts), "Separating the vocals…")
+    out = out / np.maximum(cnt, 1e-6)
+    return out[:, border:border + n]
+
+
+def _demucs(m, mix, dev, progress, cancelled, lo, hi, msg):
     import torch
     from demucs import apply as dapply
     from demucs.apply import apply_model
-
-    hit = cached_stems(cache_root, path, model)
-    if hit:
-        return hit
-    progress = progress or (lambda f, msg: None)
-    progress(0.0, "Loading the stem model (downloads once, about 80 MB)…")
-    m = _load_model(model, models_dir)
-    dev = _torch_device()
-    progress(0.02, "Splitting…")
 
     class _Bar:  # Demucs reports progress through tqdm: route it to our callback
         def __init__(self, it=None, total=None, **kw):
@@ -467,13 +542,13 @@ def split_stems(path: str, cache_root: str, models_dir: str, model: str = "htdem
             for k, x in enumerate(self.it):
                 if cancelled and cancelled():
                     raise InterruptedError
-                progress(0.02 + 0.93 * k / max(1, len(self.it)), "Splitting…")
+                progress(lo + (hi - lo) * k / max(1, len(self.it)), msg)
                 yield x
 
     orig = dapply.tqdm.tqdm
     dapply.tqdm.tqdm = _Bar
     try:
-        wav = torch.from_numpy(audio(path))
+        wav = torch.from_numpy(mix)
         ref = wav.mean(0)
         mean, std = ref.mean(), ref.std() + 1e-8
         x = ((wav - mean) / std)[None]
@@ -485,16 +560,51 @@ def split_stems(path: str, cache_root: str, models_dir: str, model: str = "htdem
                 raise
             with torch.no_grad():
                 out = apply_model(m, x, device="cpu", shifts=1, split=True, overlap=0.25, progress=True)
-        out = (out[0] * std + mean).cpu().numpy()
+        return (out[0] * std + mean).cpu().numpy()
     finally:
         dapply.tqdm.tqdm = orig
+
+
+def split_stems(path: str, cache_root: str, models_dir: str, model: str = "htdemucs", progress=None, cancelled=None):
+    """Separate a song into stems (Demucs, or RoFormer vocals + Demucs). Cached per song + model. Returns {stem: flac path}."""
+    import soundfile as sf
+
+    hit = cached_stems(cache_root, path, model)
+    if hit:
+        return hit
+    progress = progress or (lambda f, msg: None)
+    dev = _torch_device()
+    mix = audio(path).astype(np.float32)
+    sources = {}
+    if model == "roformer":
+        progress(0.0, "Loading the vocal model…")
+        rf = _load_roformer(models_dir, progress)
+        try:
+            voc = roformer_vocals(rf, mix, dev, progress, cancelled, 0.25, 0.7)
+        except (RuntimeError, NotImplementedError):
+            if dev == "cpu":
+                raise
+            voc = roformer_vocals(rf, mix, "cpu", progress, cancelled, 0.25, 0.7)
+        rest = mix - voc
+        progress(0.7, "Loading the drum & bass model…")
+        m = _load_model("htdemucs", models_dir)
+        out = _demucs(m, rest, dev, progress, cancelled, 0.72, 0.95, "Splitting drums & bass…")
+        sources = {"vocals": voc, "drums": out[m.sources.index("drums")], "bass": out[m.sources.index("bass")]}
+    else:
+        progress(0.0, "Loading the stem model (downloads once, about 80 MB)…")
+        m = _load_model(model, models_dir)
+        progress(0.02, "Splitting…")
+        out = _demucs(m, mix, dev, progress, cancelled, 0.02, 0.95, "Splitting…")
+        sources = {name: out[i] for i, name in enumerate(m.sources) if name != "other"}
+    # 'other' is everything the named stems didn't take, so all stems together add up to the original exactly
+    sources["other"] = mix - sum(sources.values())
     progress(0.96, "Saving stems…")
     d = stems_dir(cache_root, path, model)
     os.makedirs(d, exist_ok=True)
     files = {}
-    for i, name in enumerate(m.sources):
+    for name, y in sources.items():
         p = os.path.join(d, name + ".flac")
-        sf.write(p + ".part.flac", np.clip(out[i].T, -1, 1), SR, subtype="PCM_16")
+        sf.write(p + ".part.flac", np.clip(y.T, -1, 1), SR, subtype="PCM_24")
         os.replace(p + ".part.flac", p)
         files[name] = p
     progress(1.0, "Done")

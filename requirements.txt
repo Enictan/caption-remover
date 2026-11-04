@@ -11,3 +11,6 @@ librosa>=0.10
 pedalboard>=0.9.8
 soundfile>=0.12
 demucs>=4.1
+einops>=0.7
+beartype>=0.18
+rotary-embedding-torch==0.6.5
