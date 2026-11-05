@@ -1,0 +1,29 @@
+/* iPad web app: hide what only makes sense on the Mac, size controls for fingers */
+.webapp #wsw, .webapp #mxPr, .webapp .crtabs [data-c=mix], .webapp #setBtn, .webapp #helpBtn { display: none !important; }
+.webapp body { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; overscroll-behavior: none; }
+.webapp input, .webapp select { -webkit-user-select: auto; }
+html.webapp, .webapp body { position: fixed; inset: 0; overflow: hidden; }
+.webapp #app { padding-top: env(safe-area-inset-top); padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); padding-bottom: env(safe-area-inset-bottom); box-sizing: border-box; }
+@media (pointer: coarse) {
+  .webapp .minib { height: 30px; padding: 0 10px; font-size: 12px; }
+  .webapp .ibtn { width: 32px; height: 30px; font-size: 15px; }
+  .webapp .trow .ibtn { width: 30px; }
+  .webapp .ptabs { height: 26px; } .webapp .ptabs button { height: 26px; padding: 0 10px; font-size: 11px; }
+  .webapp .dctl { height: 116px; grid-template-columns: 146px 214px 210px minmax(0,1fr); }
+  .webapp .pbtn, .webapp .cbtn { height: 42px; } .webapp .pbtn { width: 44px; }
+  .webapp .stem .sb button, .webapp .eqc .kill { height: 26px; }
+  .webapp input[type=range] { height: 22px; }
+  .webapp #mixer .seg button { padding: 6px 12px; }
+  .webapp .crow .ab button, .webapp .crow button { min-height: 26px; }
+}
+#webExport { position: fixed; inset: 0; z-index: 200; display: none; align-items: center; justify-content: center; background: rgba(0,0,0,.55); }
+#webExport .wxcard { width: 360px; background: var(--p1); border: 1px solid var(--line2); border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 20px 50px rgba(0,0,0,.6); }
+#webExport .wxname { font-weight: 600; word-break: break-word; }
+#webExport .wxsub { color: var(--tx3); font-size: 12px; }
+#webExport .wxbtns { display: flex; gap: 8px; justify-content: flex-end; margin: 6px 0 2px; }
+#webExport .btn { height: 36px; padding: 0 16px; }
+#rotateHint { display: none; }
+@media (orientation: portrait) {
+  .webapp #rotateHint { display: flex; position: fixed; inset: 0; z-index: 300; background: var(--bg); color: var(--tx2); flex-direction: column; align-items: center; justify-content: center; gap: 12px; font-size: 15px; text-align: center; padding: 30px; }
+  .webapp #rotateHint b { color: var(--tx); font-size: 18px; }
+}

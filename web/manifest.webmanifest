@@ -1,0 +1,15 @@
+{
+  "name": "Tru Studio Music",
+  "short_name": "Tru Studio",
+  "description": "Two-deck music studio: key and tempo matching, hot cues, loops, EQ, recording.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#0a0a0c",
+  "theme_color": "#0a0a0c",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
