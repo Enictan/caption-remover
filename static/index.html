@@ -320,9 +320,10 @@ kbd{font:500 10px Inter;color:var(--tx3);border:1px solid var(--line2);border-ra
 .eqc .fl{display:flex;justify-content:space-between;font-size:9.5px;color:var(--tx3);font-weight:600;height:20px;align-items:center}
 .pextra .sx{font-size:10.5px;color:var(--gold2);padding:0 4px;border-radius:4px;font-weight:600}
 .pextra .sx:hover{background:var(--p3)}
-#phaseBox{position:relative;width:112px;height:30px;flex:none}
+#phaseBox{position:relative;width:92px;height:30px;flex:none}
 #phaseBox canvas{position:absolute;inset:0;width:100%;height:100%}
 #phaseT{position:absolute;right:0;bottom:-11px;font-size:9px;color:var(--tx3);white-space:nowrap}
+#mxAlign.locked{background:rgba(65,196,138,.16);border-color:rgba(65,196,138,.6);color:#bff0d6;display:flex;align-items:center;gap:5px}
 #mxQ{font-weight:700;width:26px;padding:0;flex:none}
 #mxRec{display:flex;align-items:center;gap:5px;flex:none;font-variant-numeric:tabular-nums;min-width:52px;justify-content:center}
 #mxRec .rdot{width:8px;height:8px;border-radius:50%;background:#a33}
@@ -1213,7 +1214,7 @@ class Deck{
     Object.keys(bufs).forEach(n=>{ const g=A.createGain(); g.connect(this.inSum); this.partGains[n]=g; });
     this.mode=Object.keys(bufs).length>1?'stems':'mix'; this.gainNodes=this.mode==='stems'?this.partGains:null;
     this.anchor={off:p,t0:A.currentTime,rate:this.rate}; this.applyGains();
-    if(was) this.startSources(p,A.currentTime+0.015); }
+    if(was) this.startSources(p+0.015*this.rate,A.currentTime+0.015); }   // pick up where the song will be at that moment
   fade(to,at){ const g=this.inSum.gain; g.cancelScheduledValues(at); g.setValueAtTime(g.value,at); g.linearRampToValueAtTime(to,at+0.01); }
   startSources(off,at){ const A=ac(); off=Math.max(0,Math.min(this.dur,off));
     if(this.loop&&(off<this.loop.start-1e-3||off>this.loop.end+1e-3)) this.loop=null;
@@ -1460,6 +1461,7 @@ function alignBeats(followId){ const F=DECKS[followId||(SYNC.on?(SYNC.lead==='A'
   const fp=F.pos(); let j=F.beatIndex(fp); if(j<0) j=0; if(j<fbt.length-1&&fp-fbt[j]>(fbt[j+1]-fbt[j])/2) j++; j=Math.min(j,fbt.length-2);
   F.seek(fbt[j]+frac*(fbt[j+1]-fbt[j])); }
 async function playBoth(){ const A=DECKS.A, B=DECKS.B; if(!A.loaded&&!B.loaded) return;
+  if(typeof LOCK!=='undefined'&&LOCK.on&&A.loaded&&B.loaded){ const L=DECKS[SYNC.lead]; if(A.playing||B.playing){ L.pause(); } else { await L.play(); } mixPlayIc(); return; }
   if(A.playing||B.playing||BOTH_STARTING){ BOTH_STARTING=false; A.pause(); B.pause(); mixPlayIc(); return; }
   BOTH_STARTING=true;
   if(A.loaded&&B.loaded&&SYNC.on){ syncTempo(); alignBeats(); }
@@ -1708,6 +1710,62 @@ $('mxsReset').onclick=async()=>{ await api('/api/mixsync/reset',{}); MIXS.lastSi
 { const f=prRender; prRender=function(){ f(); }; }
 setInterval(()=>{ if(MIXS.live||MIXS.tab==='mix'){ mixPoll(); if(MIXS.tab==='mix') mixRender(); } },1500);
 crTab(MIXS.tab);
+
+// ---------- Lock: with Sync on, the two decks act as one (play, pause, seek, cues, jumps and loops move both)
+const LOCK={on:false,pair:null,busy:false};
+const lockMap=(from,to,p)=>LOCK.pair[to.id]+(p-LOCK.pair[from.id])*to.rate/from.rate;
+const lockLive=d=>LOCK.on&&!LOCK.busy&&d.loaded&&d.other().loaded;
+function posAt(d,T){ const a=d.anchor||{off:0,t0:0,rate:1}; return d.playing?a.off+Math.max(0,T-a.t0)*a.rate:a.off; }
+function lockUi(){ const b=$('mxAlign'); if(!b) return; b.classList.toggle('locked',LOCK.on);
+  b.innerHTML=LOCK.on?'<svg width="11" height="12" viewBox="0 0 22 24" fill="none" stroke="currentColor" stroke-width="2.6"><rect x="3" y="10" width="16" height="12" rx="2"/><path d="M7 10V7a4 4 0 0 1 8 0v3"/></svg>Locked':'Align';
+  b.title=LOCK.on?'The decks are locked together: play, pause, seek, hot cues, jumps and loops move both. Click to line the beats up again. Choose Free to unlock.':'Line up the beats and lock the decks together (turns Sync on)'; }
+function lockNow(quiet){ const A=DECKS.A, B=DECKS.B;
+  if(!(A.loaded&&B.loaded)){ LOCK.on=false; lockUi(); return; }
+  if(!SYNC.on){ setSeg('mxSync','sync'); SYNC.on=true; Object.values(DECKS).forEach(d=>d.render()); }
+  const L=DECKS[SYNC.lead], F=L.other();
+  LOCK.busy=true; try{ syncTempo(); alignBeats(F.id); } finally{ LOCK.busy=false; }
+  const T=F.playing?F.anchor.t0:ac().currentTime;
+  LOCK.pair={[L.id]:posAt(L,T),[F.id]:posAt(F,T)}; LOCK.on=true; lockUi(); mixStatus();
+  if(!quiet) toast('Decks locked: play, pause, seek, cues and loops now move both'); }
+function unlock(){ LOCK.on=false; LOCK.pair=null; lockUi(); }
+function lockPlace(O,q,playing){ const A=ac(), now=A.currentTime;
+  if(!playing){ O.anchor={off:Math.max(0,Math.min(O.dur,q)),t0:now,rate:O.rate}; O.dirty=true; O.draw(); return; }
+  if(q>=O.dur-0.02){ LOCK_ORIG.pause.call(O); return; }
+  O.fade(0,now); O.stopSources(now+0.012);
+  O.startSources(Math.max(0,q),now+0.012+(q<0?-q/O.rate:0)); O.playing=true; O.dirty=true; O.render(); O.draw(); kick(); }
+const LOCK_ORIG={};
+{ const P=Deck.prototype; ['play','pause','seek','setRate','applyLoop','exitLoop','load','unload'].forEach(k=>LOCK_ORIG[k]=P[k]);
+  P.play=async function(at){ if(!lockLive(this)) return LOCK_ORIG.play.call(this,at);
+    const A=ac(); if(A.state==='suspended') await A.resume(); if(!lockLive(this)) return LOCK_ORIG.play.call(this,at);
+    const O=this.other(), t=at||A.currentTime+0.05; let p=this.pos(); if(p>=this.dur-0.05) p=this.cue||0;
+    this.anchor={off:p,t0:A.currentTime,rate:this.rate};
+    const q=lockMap(this,O,p), ps=[];
+    LOCK.busy=true; try{
+      ps.push(LOCK_ORIG.play.call(this,t));
+      if(q<O.dur-0.05){ O.anchor={off:Math.max(0,q),t0:A.currentTime,rate:O.rate}; ps.push(LOCK_ORIG.play.call(O,q>=0?t:t-q/O.rate)); }
+    } finally{ LOCK.busy=false; }
+    await Promise.all(ps); mixPlayIc(); };
+  P.pause=function(){ if(!lockLive(this)) return LOCK_ORIG.pause.call(this);
+    LOCK.busy=true; try{ LOCK_ORIG.pause.call(this); LOCK_ORIG.pause.call(this.other()); } finally{ LOCK.busy=false; } mixPlayIc(); };
+  P.seek=function(p){ if(!lockLive(this)) return LOCK_ORIG.seek.call(this,p);
+    const O=this.other(), playing=this.playing; LOCK.busy=true;
+    try{ LOCK_ORIG.seek.call(this,p); const pp=Math.max(0,Math.min(this.dur,p)); lockPlace(O,lockMap(this,O,pp),playing); } finally{ LOCK.busy=false; } };
+  P.setRate=function(r){ if(LOCK.on&&this.loaded&&this.other().loaded){ const O=this.other(), now=ac().currentTime, p=posAt(this,now);
+      LOCK.pair={[this.id]:p,[O.id]:lockMap(this,O,p)}; }
+    return LOCK_ORIG.setRate.call(this,r); };
+  P.applyLoop=function(L,p){ if(!lockLive(this)) return LOCK_ORIG.applyLoop.call(this,L,p);
+    const O=this.other(); LOCK.busy=true;
+    try{ LOCK_ORIG.applyLoop.call(this,L,p); const s0=lockMap(this,O,L.start), e0=lockMap(this,O,L.end);
+      if(s0>=0&&e0<=O.dur) LOCK_ORIG.applyLoop.call(O,{start:s0,end:e0,beats:L.beats,i:Math.max(0,O.beatIndex(s0))},O.pos()); } finally{ LOCK.busy=false; } };
+  P.exitLoop=function(){ if(!lockLive(this)) return LOCK_ORIG.exitLoop.call(this);
+    LOCK.busy=true; try{ LOCK_ORIG.exitLoop.call(this); LOCK_ORIG.exitLoop.call(this.other()); } finally{ LOCK.busy=false; } };
+  P.load=async function(t){ unlock(); const r=await LOCK_ORIG.load.call(this,t); if(SYNC.on&&DECKS.A.loaded&&DECKS.B.loaded) lockNow(true); return r; };
+  P.unload=function(keep){ unlock(); return LOCK_ORIG.unload.call(this,keep); }; }
+$('mxAlign').onclick=()=>lockNow();
+
+document.querySelectorAll('#mxSync button').forEach(b=>b.addEventListener('click',()=>{ if(b.dataset.v==='sync') lockNow(); else { unlock(); toast('Decks unlocked: each plays on its own'); } }));
+document.querySelectorAll('#mxLead button').forEach(b=>b.addEventListener('click',()=>{ if(LOCK.on) lockNow(true); }));
+lockUi();
 
 // ---------- on-screen keyboard: check a key by ear
 let KB_LAST='';
