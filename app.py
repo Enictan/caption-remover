@@ -30,7 +30,7 @@ import updater
 import voice
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-VERSION = "1.9.2"
+VERSION = "1.10.0"
 NATIVE = False  # set when running inside the native window
 _home = os.path.expanduser("~")
 _vids = "Movies" if sys.platform == "darwin" else "Videos"
@@ -395,6 +395,7 @@ def _apply_key(t, tonic, mode):
 def _public(t):
     out = {k: v for k, v in t.items() if k not in ("path", "stems", "_peaks")}
     out["stem_names"] = list((t.get("stems") or {}).keys())
+    out["stem_labels"] = t.get("stem_labels") or {}
     return out
 
 
@@ -424,6 +425,7 @@ async def music_upload(file: UploadFile = File(...)):
         hit = music.cached_stems(os.path.join(SUPPORT, "stems"), path, st)
         if hit:
             t["stems"], t["stems_model"] = hit, st
+            _attach_harmony(t)
             t.update(music.key_from_stems(hit, t["beats"]))
             _stem_jobs[tid] = {"state": "done", "progress": 1.0, "message": "Done", "model": st}
     except Exception:
@@ -605,6 +607,7 @@ def _run_stems(tid, model):
         files = music.split_stems(t["path"], STEMS_CACHE, os.path.join(engine.MODEL_DIR, "torch"), model, prog,
                                   lambda: j.get("cancel"))
         t["stems"], t["stems_model"] = files, model
+        _attach_harmony(t)
         j.update(message="Checking the key with the stems…", progress=0.99)
         if not t.get("key_user"):
             try:
@@ -636,6 +639,7 @@ def music_stems_start(tid: str, body: dict):
     hit = music.cached_stems(STEMS_CACHE, t["path"], model)
     if hit:
         t["stems"], t["stems_model"] = hit, model
+        _attach_harmony(t)
         if not t.get("key_user") and t.get("key_source") != "stems":
             try:
                 t.update(music.key_from_stems(hit, t["beats"]))
@@ -653,6 +657,93 @@ def music_stems_start(tid: str, body: dict):
     _stem_jobs[tid] = {"state": "running", "progress": 0.0, "message": "Waiting for the other split to finish…", "model": model}
     _stem_pool.submit(_run_stems, tid, model)
     return _stem_public(tid)
+
+
+# ---- harmony maker: backing vocals made from a line of the vocal stem, saved as extra stems
+_harm_jobs: dict[str, dict] = {}
+
+
+def _attach_harmony(t):
+    """Harmonies made earlier for this song come back as stems (they sit next to the split stems)."""
+    import music
+    files, labels, settings = music.cached_harmony(STEMS_CACHE, t["path"])
+    st = t.get("stems") or {}
+    for n in [k for k in st if k.startswith("harm")]:
+        st.pop(n, None)
+    if files and st:
+        st.update(files)
+        t["stems"] = st
+    t["stem_labels"] = labels if (files and st) else {}
+    t["harmony"] = settings if (files and st) else None
+
+
+@app.post("/api/music/harmony/{tid}")
+def music_harmony(tid: str, body: dict):
+    import music
+    t = _track(tid)
+    voc = (t.get("stems") or {}).get("vocals")
+    if not voc or not os.path.exists(voc):
+        raise HTTPException(400, "Split the stems first: harmonies are made from the Vocals stem")
+    start, end = float(body.get("start", 0)), float(body.get("end", 0))
+    if not 0 <= start < end or end - start < 0.3:
+        raise HTTPException(400, "Mark a line first (at least a short phrase)")
+    if end - start > 60:
+        raise HTTPException(400, "Mark a shorter line (up to a minute)")
+    voices = [v for v in (body.get("voices") or []) if v.get("iv") in music.HARMONY_INTERVALS][:4]
+    if not voices:
+        raise HTTPException(400, "Add at least one harmony voice")
+    j = _harm_jobs.get(tid)
+    if j and j.get("state") == "running":
+        raise HTTPException(409, "Already making harmonies for this song")
+    job = _harm_jobs[tid] = {"state": "running", "progress": 0.0, "message": "Starting…"}
+    key = {"tonic": int(body.get("tonic", t["tonic"])) % 12, "mode": body.get("mode") or t["mode"]}
+    settings = {"start": start, "end": end, "voices": voices, "humanize": float(body.get("humanize", 0.5)),
+                "reverb": float(body.get("reverb", 0.3)), **key}
+
+    def run():
+        import json
+        import soundfile as sf
+        try:
+            res = music.harmonize(voc, start, end, key["tonic"], key["mode"], voices, t.get("bpm") or 120,
+                                  humanize=settings["humanize"], reverb=settings["reverb"],
+                                  progress=lambda f, m: job.update(progress=f, message=m))
+            d = music.harmony_dir(STEMS_CACHE, t["path"])
+            if os.path.isdir(d):
+                shutil.rmtree(d, ignore_errors=True)
+            os.makedirs(d, exist_ok=True)
+            labels, used = {}, {}
+            for i, (name, arr) in enumerate(res):
+                n = f"harm{i + 1}"
+                used[name] = used.get(name, 0) + 1
+                labels[n] = "Harmony · " + name + (f" {used[name]}" if used[name] > 1 else "")
+                sf.write(os.path.join(d, n + ".flac"), np.clip(arr.T, -1, 1), music.SR, subtype="PCM_24")
+            json.dump({"labels": labels, "settings": settings}, open(os.path.join(d, "harmony.json"), "w", encoding="utf-8"))
+            _attach_harmony(t)
+            job.update(state="done", progress=1.0, message="Done")
+        except Exception as e:  # noqa
+            job.update(state="error", message=f"Couldn't make the harmonies: {e}")
+    threading.Thread(target=run, daemon=True).start()
+    return {"ok": True}
+
+
+@app.get("/api/music/harmony/{tid}")
+def music_harmony_status(tid: str):
+    t = _track(tid)
+    j = _harm_jobs.get(tid) or {"state": "idle"}
+    return {**{k: v for k, v in j.items()}, "stem_names": list((t.get("stems") or {}).keys()),
+            "stem_labels": t.get("stem_labels") or {}, "settings": t.get("harmony"),
+            "intervals": {k: v[1] for k, v in __import__("music").HARMONY_INTERVALS.items()}}
+
+
+@app.delete("/api/music/harmony/{tid}")
+def music_harmony_delete(tid: str):
+    import music
+    t = _track(tid)
+    d = music.harmony_dir(STEMS_CACHE, t["path"])
+    if os.path.isdir(d):
+        shutil.rmtree(d, ignore_errors=True)
+    _attach_harmony(t)
+    return {"ok": True, "stem_names": list((t.get("stems") or {}).keys())}
 
 
 @app.get("/api/music/stems/{tid}")
@@ -1022,7 +1113,7 @@ def _mix_run(st):
         src = t["path"] if stem == "mix" else (t.get("stems") or {}).get(stem)
         if not src or not os.path.exists(src):
             continue
-        name = STEM_LABELS.get(stem, stem.title())
+        name = (t.get("stem_labels") or {}).get(stem) or STEM_LABELS.get(stem, stem.title())
         label = f"Tru · {t['name']} · {name}"
         semis, ratio, gain = float(ln.get("semis", 0)), float(ln.get("ratio", 1)), float(ln.get("gain", 1))
         sig = f"{src}|{semis:.3f}|{ratio:.5f}|{gain:.4f}"

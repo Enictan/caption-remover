@@ -376,6 +376,27 @@ kbd{font:500 10px Inter;color:var(--tx3);border:1px solid var(--line2);border-ra
 #mxsStatus{font-size:11.5px;color:var(--tx2);min-height:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #mxsStatus.mxok{color:var(--green)} #mxsStatus.mxerr{color:var(--red)}
 .mxs-btns{display:flex;gap:6px;justify-content:flex-end}
+#harmPanel{position:fixed;z-index:85;display:none;flex-direction:column;gap:9px;background:var(--p1);border:1px solid rgba(180,140,255,.45);border-radius:12px;box-shadow:0 18px 40px rgba(0,0,0,.6);padding:12px 14px}
+#harmPanel .hh{display:flex;align-items:center;gap:10px} #harmPanel .hh b{font-size:13px} #harmPanel .hh .k{color:#cdb6ff;font-size:12px;font-weight:600}
+#harmPanel .hh .sub{color:var(--tx3);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0}
+#harmPanel .hrow{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;min-width:0}
+#harmPanel .hrow>.lbl{width:58px;flex:none}
+#harmPanel .hline{font-size:12px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+#harmPanel .hline.none{color:var(--tx3);font-weight:500}
+#harmPanel .hv{display:grid;grid-template-columns:150px 132px 118px 96px minmax(70px,1fr) minmax(70px,1fr) 24px;gap:8px;align-items:center;background:var(--p2);border:1px solid var(--line);border-radius:8px;padding:5px 8px}
+#harmPanel .hv select{height:26px;background:var(--p3);color:var(--tx);border:1px solid var(--line2);border-radius:6px;font:inherit;font-size:12px;padding:0 6px}
+#harmPanel .hv .seg button{padding:3px 8px;font-size:11.5px}
+#harmPanel .hv .off{display:flex;align-items:center;gap:4px;font-size:11.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+#harmPanel .hv .off button,#harmPanel .hv .x{width:22px;height:22px;border-radius:5px;border:1px solid var(--line2);background:var(--p3);font-size:12px;line-height:1;padding:0}
+#harmPanel .hv label{display:flex;flex-direction:column;gap:1px;font-size:10px;color:var(--tx3);min-width:0} #harmPanel .hv input[type=range]{width:100%}
+#harmPanel .hv .dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:6px}
+#harmPanel .hnat label{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--tx2);flex:1} #harmPanel .hnat input{flex:1}
+#harmPanel .hfoot{display:flex;align-items:center;gap:8px;border-top:1px solid var(--line);padding-top:9px}
+#harmPanel .hst{flex:1;font-size:11.5px;color:var(--tx2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+#harmPanel .hprog{height:3px;background:var(--p3);border-radius:2px;overflow:hidden} #harmPanel .hprog i{display:block;height:100%;background:#b48cff;width:0}
+.pextra .sx.hx{color:#cdb6ff}
+.pextra .sx.sxe{display:inline-flex;align-items:center;vertical-align:middle;height:18px}
+.pextra{overflow:visible!important;display:flex;align-items:center;gap:2px;flex:none}
 #keyMenu{position:fixed;z-index:80;display:none;background:var(--p1);border:1px solid var(--line2);border-radius:10px;box-shadow:0 14px 34px rgba(0,0,0,.55);padding:6px;width:240px}
 #keyMenu .t{font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--tx3);padding:4px 6px}
 #keyMenu button{display:flex;justify-content:space-between;width:100%;padding:6px 8px;border-radius:6px;color:var(--tx2)}
@@ -518,6 +539,15 @@ kbd{font:500 10px Inter;color:var(--tx3);border:1px solid var(--line2);border-ra
 </div>
 <input type="file" id="mFile" accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.flac,.ogg,.aiff,.aif" hidden multiple>
 <div id="keyMenu"></div>
+<div id="harmPanel">
+  <div class="hh"><b>Harmony maker</b><span class="k" id="hmKey"></span><span class="sub" id="hmSub"></span><button class="ibtn" id="hmClose" title="Close">✕</button></div>
+  <div class="hrow"><span class="lbl">Line</span><span class="hline" id="hmLine"></span><div style="flex:1"></div>
+    <button class="minib" id="hmUseLoop" title="Use the deck's current loop as the line">Use loop</button><button class="minib" id="hmStart" title="Start the line at the playhead">Start here</button><button class="minib" id="hmEnd" title="End the line at the playhead">End here</button><button class="minib" id="hmAudition" title="Loop the line so you can hear it with its harmonies">Loop line</button></div>
+  <div id="hmVoices" style="display:flex;flex-direction:column;gap:5px"></div>
+  <div class="hrow hnat"><button class="minib" id="hmAdd">+ Add voice</button><label title="Small timing and pitch differences between takes, so it sounds sung, not copied">Human feel<input type="range" id="hmHuman" min="0" max="1" step="0.05" value="0.5"></label><label title="Room around the backing vocals">Reverb<input type="range" id="hmVerb" min="0" max="1" step="0.05" value="0.3"></label></div>
+  <div class="hprog"><i id="hmProg"></i></div>
+  <div class="hfoot"><span class="hst" id="hmStatus"></span><button class="minib" id="hmRemove" title="Delete this song's harmony stems">Remove harmonies</button><button class="btn sm gold" id="hmMake">Make harmonies</button></div>
+</div>
 <div id="prMenu">
   <div class="prh"><b>Premiere Pro</b><span id="prState">—</span></div>
   <div class="prseq" id="prSeq"></div>
@@ -1093,6 +1123,13 @@ const keyName=(t,m)=>`${m==='minor'&&FLATM[t]?FLATM[t]:NOTE_NAMES[t]} ${m}`;
 const camelotOf=(t,m)=>m==='minor'?CAM_MIN[t]+'A':CAM_MAJ[t]+'B';
 const STEM_COL={vocals:'#f0c46c',drums:'#ef5b5b',bass:'#5aa2ff',other:'#41c48a',guitar:'#c58af9',piano:'#f59e5b'};
 const STEM_NAME={vocals:'Vocals',drums:'Drums',bass:'Bass',other:'Other',guitar:'Guitar',piano:'Piano'};
+const HARM_COL=['#b48cff','#e58cf0','#8ca2ff','#ff8cc6'];
+function stemLabel(t,n){ return (t&&t.stem_labels&&t.stem_labels[n])||STEM_NAME[n]||n; }
+const STEM_TINY={vocals:'Vox',drums:'Drm',bass:'Bas',other:'Oth',guitar:'Gtr',piano:'Key'};
+function stemShort(t,n,tiny){ const l=t&&t.stem_labels&&t.stem_labels[n];
+  if(l){ const m=l.match(/(Double|(\d)\w\w|Octave) ?(above|below)?/); if(!m) return 'Hm'; const base=m[1]==='Octave'?'8':m[1]==='Double'?'Dbl':(tiny?m[2]:m[1]); return base+(m[3]==='above'?'↑':m[3]==='below'?'↓':''); }
+  return (tiny?STEM_TINY[n]:STEM_SHORT[n])||n; }
+function stemCol(n){ return STEM_COL[n]||(n.startsWith('harm')?HARM_COL[(+n.slice(4)-1)%4]:'#999'); }
 const STEM_SHORT={vocals:'Vox',drums:'Drums',bass:'Bass',other:'Other',guitar:'Gtr',piano:'Keys'};
 const PAL={A:{low:'#7a5c22',mid:'#d6a64f',high:'#f6e9c9',head:'#f0c46c'},B:{low:'#24507f',mid:'#4f8fe0',high:'#dbe9ff',head:'#7cb6ff'}};
 const ZOOM_SEC=6, LEAD=0.06;
@@ -1387,12 +1424,13 @@ class Deck{
     if(!t){ box.innerHTML=''; return; }
     if(this.mode==='stems'&&this.gainNodes){
       const names=Object.keys(this.gainNodes), short=names.length>4;
-      ex.innerHTML=`<button class="sx" title="Save each stem as its own WAV file (opens the folder)">Export</button>`;
+      ex.innerHTML=`${t.stem_names&&t.stem_names.includes('vocals')||names.includes('vocals')?'<button class="sx hx" title="Harmony maker: backing vocals from a line of the Vocals stem">Harmony</button>':''}<button class="sx sxe" title="Export: save each stem as its own WAV file (opens the folder)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M12 3v12M6 10l6 6 6-6M4 21h16"/></svg></button>`;
+      const hx=ex.querySelector('.hx'); if(hx) hx.onclick=e=>{ e.stopPropagation(); harmOpen(this); };
       box.innerHTML=`<div class="stems" style="--n:${names.length}">${names.map(n=>`
-        <div class="stem ${this.effGains()[n]===0?'off':''}" data-s="${n}"><div class="sn"><i style="background:${STEM_COL[n]||'#999'}"></i>${short?STEM_SHORT[n]||n:STEM_NAME[n]||n}</div>
+        <div class="stem ${this.effGains()[n]===0?'off':''}" data-s="${n}" title="${esc(stemLabel(t,n))}"><div class="sn"><i style="background:${stemCol(n)}"></i>${short?stemShort(t,n,names.length>6):stemLabel(t,n)}</div>
         <div class="sb"><button class="m ${this.mute[n]?'on':''}" title="Mute">M</button><button class="s ${this.solo[n]?'on':''}" title="Solo">S</button></div>
-        <input type="range" min="0" max="1.25" step="0.01" value="${this.gains[n]??1}" title="${STEM_NAME[n]||n} volume (double-click: 100%)"></div>`).join('')}</div>`;
-      ex.querySelector('.sx').onclick=e=>{ e.stopPropagation(); this.exportStems(); };
+        <input type="range" min="0" max="1.25" step="0.01" value="${this.gains[n]??1}" title="${esc(stemLabel(t,n))} volume (double-click: 100%)"></div>`).join('')}</div>`;
+      ex.querySelector('.sx:not(.hx)').onclick=e=>{ e.stopPropagation(); this.exportStems(); };
       box.querySelectorAll('.stem').forEach(el=>{ const n=el.dataset.s, upd=()=>{ this.applyGains(); this.renderStems(); };
         el.querySelector('.m').onclick=()=>{ this.mute[n]=!this.mute[n]; upd(); }; el.querySelector('.s').onclick=()=>{ this.solo[n]=!this.solo[n]; upd(); };
         const r=el.querySelector('input'); r.oninput=()=>{ this.gains[n]=+r.value; this.applyGains(); el.classList.toggle('off',this.effGains()[n]===0); }; r.ondblclick=()=>{ this.gains[n]=1; upd(); }; });
@@ -1424,6 +1462,7 @@ class Deck{
         for(let k=0;k<=cols;k++){ const i=Math.floor(t0*ps)+k; if(i<0||i>=P.peak.length) continue; const x=(i/ps-t0)/span*w; this.bars(g,x,Math.max(1,cw-0.4),mid,h,i,col); }
         const b=this.t.beats||[]; let j=Math.max(0,this.beatIndex(t0));
         for(;j<b.length&&b[j]<=t0+span;j++){ if(b[j]<t0) continue; const x=(b[j]-t0)/span*w; const bar=j%4===0; g.fillStyle=bar?'rgba(255,255,255,.55)':'rgba(255,255,255,.16)'; g.fillRect(Math.round(x),bar?0:h*0.78,1,bar?h:h*0.22); }
+        if(this.hline){ const x0=(this.hline.start-t0)/span*w, x1=(this.hline.end-t0)/span*w; g.fillStyle='rgba(180,140,255,.14)'; g.fillRect(x0,0,x1-x0,h); g.fillStyle='#b48cff'; g.fillRect(Math.round(x0),0,1,h); g.fillRect(Math.round(x1),0,1,h); }
         if(this.loop){ const L=this.loop, x0=(L.start-t0)/span*w, x1=(L.end-t0)/span*w; g.fillStyle='rgba(65,196,138,.13)'; g.fillRect(x0,0,x1-x0,h); g.fillStyle='#41c48a'; g.fillRect(Math.round(x0),0,1.5,h); g.fillRect(Math.round(x1)-1,0,1.5,h); }
         (this.hot||[]).forEach((v,k)=>{ if(v==null||v<t0||v>t0+span) return; const x=(v-t0)/span*w; g.fillStyle=HOT_COL[k]; g.fillRect(x-0.5,0,1,h); g.fillRect(x,h-13,13,13); g.fillStyle='#111'; g.font='bold 9px Inter'; g.fillText(k+1,x+4,h-3.5); });
         const o=this.other(); if(o&&o.t&&o.peaks&&(o.t.beats||[]).length>1){   // the other deck's beats, mapped onto this deck's timeline
@@ -1441,6 +1480,7 @@ class Deck{
         const x=this.heardPos()/this.dur*w; g.fillStyle='rgba(10,10,12,.55)'; g.fillRect(0,0,x,h); g.fillStyle='#fff'; g.fillRect(x-1,0,2,h);
         const cx=this.cue/this.dur*w; g.fillStyle='#41c48a'; g.fillRect(cx-0.5,0,1,h);
         if(this.loop){ const a=this.loop.start/this.dur*w, b=this.loop.end/this.dur*w; g.fillStyle='rgba(65,196,138,.55)'; g.fillRect(a,h-4,Math.max(2,b-a),4); }
+        if(this.hline){ const a=this.hline.start/this.dur*w, b=this.hline.end/this.dur*w; g.fillStyle='rgba(180,140,255,.6)'; g.fillRect(a,0,Math.max(2,b-a),3); }
         (this.hot||[]).forEach((v,k)=>{ if(v==null) return; const x=v/this.dur*w; g.fillStyle=HOT_COL[k]; g.fillRect(x-1,0,3,5); }); } }
     this.q('.dtime').innerHTML=this.t?`<b>${fmtS1(this.heardPos())}</b> / ${fmtS(this.dur)}`:'0:00.0';
     this.dirty=false;
@@ -1679,14 +1719,14 @@ function mixStatusLine(){ const s=MIXS.status||{}, el=$('mxsStatus'), conn=PR.st
   if(s.state==='applied'){ el.className='mxok'; el.textContent=`✓ In sync · ${s.result.placed} track${s.result.placed===1?'':'s'}${s.result.markers?` · ${s.result.markers} markers`:''}`; return; }
   if(s.state==='sent'){ el.textContent=conn?'Sending to Premiere…':'Waiting for the Premiere panel…'; return; }
   el.textContent=conn?(MIXS.live?'Live: changes go to Premiere automatically':'Press Sync now, or turn on Live sync'):'Open the Tru Studio Link panel in Premiere'; }
-const STEM_ORDER=['vocals','drums','bass','guitar','piano','other','mix'];
+const STEM_ORDER=['vocals','harm1','harm2','harm3','harm4','drums','bass','guitar','piano','other','mix'];
 function mixRender(){ if(MIXS.tab!=='mix') return; const lanes=mixLanes(), box=$('mxsLanes'), conn=PR.st&&PR.st.connected;
   $('mxsLive').checked=MIXS.live;
   $('mxsConn').textContent=PR.st&&PR.st.outdated?'Premiere panel out of date: Premiere button › Reinstall panel, then reopen Premiere':conn?(PR.st.seq?`Premiere › ${PR.st.seq.name}`:'Premiere connected · open a sequence'):PR.st&&PR.st.installed?'Premiere panel not open':'Premiere panel not installed (Premiere button, top right)';
   if(!lanes.length){ box.innerHTML=`<div class="mxs-hint"><b style="color:var(--tx)">Build a mix for your edit</b><br>Load songs into the decks and split their stems. Every stem you keep becomes its own audio track in Premiere, lined up, and updates when you change it here.</div>`; }
   else box.innerHTML=['A','B'].map(k=>{ const D=DECKS[k]; if(!D.t) return ''; const ls=lanes.filter(l=>l.deck===k).sort((a,b)=>STEM_ORDER.indexOf(a.stem)-STEM_ORDER.indexOf(b.stem));
     const kk=D.effKey(); return `<div class="mxg"><div class="mxg-h"><span class="b" style="background:${k==='A'?'#2a2312':'#14243a'};color:${k==='A'?'var(--gold2)':'#7cb6ff'}">${k}</span><span class="nm" title="${esc(D.t.name)}">${esc(D.t.name)}</span><small>${keyName(kk.tonic,kk.mode)} · ${D.bpm().toFixed(1)}</small></div>
-      ${ls.map(l=>`<div class="mxl ${l.on?'on':''}" data-d="${k}" data-s="${l.stem}" title="${l.on?'In the mix: goes to Premiere as its own track. Click to drop it':'Not in the mix. Click to add it'}"><i style="background:${STEM_COL[l.stem]||(k==='A'?'var(--gold)':'#4f8fe0')}"></i><span class="ln">${l.stem==='mix'?'Full song':(STEM_NAME[l.stem]||l.stem)}</span><span class="lg">${l.on?Math.round(l.gain*100)+'%':''}</span><span class="tg"></span></div>`).join('')}
+      ${ls.map(l=>`<div class="mxl ${l.on?'on':''}" data-d="${k}" data-s="${l.stem}" title="${l.on?'In the mix: goes to Premiere as its own track. Click to drop it':'Not in the mix. Click to add it'}"><i style="background:${l.stem==='mix'?(k==='A'?'var(--gold)':'#4f8fe0'):stemCol(l.stem)}"></i><span class="ln">${l.stem==='mix'?'Full song':esc(stemLabel(D.t,l.stem))}</span><span class="lg">${l.on?Math.round(l.gain*100)+'%':''}</span><span class="tg"></span></div>`).join('')}
       ${D.mode!=='stems'?`<div class="mxs-hint">Split stems on Deck ${k} to send its parts as separate tracks.</div>`:''}</div>`; }).join('');
   box.querySelectorAll('.mxl').forEach(el=>el.onclick=()=>mixToggle(el.dataset.d,el.dataset.s));
   const al=mixAlign(); $('mxsAlignT').textContent=al?(al.auto?'First beats together':`A ${fmtS1(al.A)} ↔ B ${fmtS1(al.B)}`):'One deck only';
@@ -1766,6 +1806,69 @@ $('mxAlign').onclick=()=>lockNow();
 document.querySelectorAll('#mxSync button').forEach(b=>b.addEventListener('click',()=>{ if(b.dataset.v==='sync') lockNow(); else { unlock(); toast('Decks unlocked: each plays on its own'); } }));
 document.querySelectorAll('#mxLead button').forEach(b=>b.addEventListener('click',()=>{ if(LOCK.on) lockNow(true); }));
 lockUi();
+
+// ---------- Harmony maker: backing vocals from a line of the Vocals stem (key-aware, natural)
+const HM={deck:null,voices:[],timer:null,intervals:null};
+const HM_IV=[['unison','Double (same notes)'],['3up','3rd above'],['4up','4th above'],['5up','5th above'],['6up','6th above'],['8up','Octave above'],['3down','3rd below'],['4down','4th below'],['5down','5th below'],['6down','6th below'],['8down','Octave below']];
+function hmBeats(d){ const L=d.hline; if(!L) return 0; return Math.round((L.end-L.start)/(60/(d.t.bpm||120))); }
+function hmAnswerOffset(d){ const b=Math.max(1,hmBeats(d)); return Math.ceil(b/4)*4; }
+function hmRender(){ const d=HM.deck; if(!d||!d.t) return; const L=d.hline, k=d.t;
+  $('hmKey').textContent=keyName(k.tonic,k.mode); $('hmSub').textContent=`Deck ${d.id} · ${k.name}`;
+  const el=$('hmLine'); el.className='hline'+(L?'':' none'); el.textContent=L?`${fmtS1(L.start)} → ${fmtS1(L.end)} · ${hmBeats(d)} beats`:'Not marked: set a loop and press Use loop, or use Start here / End here';
+  $('hmUseLoop').disabled=!d.loop; $('hmAudition').disabled=!L; $('hmAudition').classList.toggle('on',!!(L&&d.loop&&Math.abs(d.loop.start-L.start)<1e-3&&Math.abs(d.loop.end-L.end)<1e-3));
+  $('hmVoices').innerHTML=HM.voices.map((v,i)=>`<div class="hv" data-i="${i}">
+    <select title="Which harmony this voice sings (follows the song's key note by note)"><option disabled>— voice ${i+1} —</option>${HM_IV.map(([id,l])=>`<option value="${id}" ${v.iv===id?'selected':''}>${l}</option>`).join('')}</select>
+    <div class="seg" title="Sing along with the lead, or answer it afterwards"><button data-t="with" class="${v.timing==='with'?'on':''}">With lead</button><button data-t="answer" class="${v.timing==='answer'?'on':''}">Answer</button></div>
+    <div class="off" title="Move this voice in beats"><button data-o="-1">−</button><span>${v.offset>0?'+':''}${v.offset} beat${Math.abs(v.offset)===1?'':'s'}</span><button data-o="1">+</button></div>
+    <select class="tk" title="How many takes are stacked (2–3 sounds like a backing group)">${[1,2,3].map(n=>`<option value="${n}" ${v.takes===n?'selected':''}>${n} take${n>1?'s':''}</option>`).join('')}</select>
+    <label>Pan ${v.pan===0?'centre':v.pan<0?'L'+Math.round(-v.pan*100):'R'+Math.round(v.pan*100)}<input type="range" class="pan" min="-1" max="1" step="0.05" value="${v.pan}"></label>
+    <label>Level ${v.level_db>0?'+':''}${v.level_db} dB<input type="range" class="lvl" min="-18" max="3" step="1" value="${v.level_db}"></label>
+    <button class="x" title="Remove this voice">✕</button></div>`).join('')||'<div class="mxs-hint" style="padding:4px 2px">Add a voice to start (try “3rd above”).</div>';
+  $('hmVoices').querySelectorAll('.hv').forEach(row=>{ const v=HM.voices[+row.dataset.i];
+    row.querySelector('select').onchange=e=>{ v.iv=e.target.value; };
+    row.querySelector('.tk').onchange=e=>{ v.takes=+e.target.value; };
+    row.querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{ v.timing=b.dataset.t; v.offset=v.timing==='with'?0:hmAnswerOffset(d); hmRender(); });
+    row.querySelectorAll('.off button').forEach(b=>b.onclick=()=>{ v.offset+=+b.dataset.o; hmRender(); });
+    const pan=row.querySelector('.pan'); pan.oninput=()=>{ v.pan=+pan.value; pan.parentElement.firstChild.textContent='Pan '+(v.pan===0?'centre':v.pan<0?'L'+Math.round(-v.pan*100):'R'+Math.round(v.pan*100)); }; pan.ondblclick=()=>{ v.pan=0; hmRender(); };
+    const lv=row.querySelector('.lvl'); lv.oninput=()=>{ v.level_db=+lv.value; lv.parentElement.firstChild.textContent=`Level ${v.level_db>0?'+':''}${v.level_db} dB`; };
+    row.querySelector('.x').onclick=()=>{ HM.voices.splice(+row.dataset.i,1); hmRender(); }; });
+  $('hmAdd').disabled=HM.voices.length>=4; $('hmRemove').disabled=!(d.t.stem_names||[]).some(n=>n.startsWith('harm'));
+  $('hmMake').disabled=!L||!HM.voices.length; }
+function hmPlace(){ const d=HM.deck, p=$('harmPanel'); if(!d) return; const o=d.other().el.getBoundingClientRect(), me=d.el.getBoundingClientRect();
+  p.style.left=me.left+'px'; p.style.width=me.width+'px'; p.style.display='flex';
+  const h=p.offsetHeight, top=d.id==='A'?Math.min(o.top,innerHeight-h-8):Math.max(8,o.bottom-h); p.style.top=top+'px'; }
+async function harmOpen(d){ HM.deck=d; let st={};
+  try{ st=await (await fetch('/api/music/harmony/'+d.t.id)).json(); }catch(e){}
+  const S=st.settings;
+  if(S){ HM.voices=S.voices.map(v=>({iv:v.iv,timing:v.timing||'with',offset:+v.offset||0,takes:+v.takes||2,pan:+v.pan||0,level_db:+(v.level_db??-4)})); d.hline={start:S.start,end:S.end}; $('hmHuman').value=S.humanize; $('hmVerb').value=S.reverb; }
+  else if(!HM.voices.length||HM.deckId!==d.t.id){ HM.voices=[{iv:'3up',timing:'with',offset:0,takes:2,pan:-0.2,level_db:-4},{iv:'3down',timing:'with',offset:0,takes:2,pan:0.2,level_db:-6}]; if(!d.hline&&d.loop) d.hline={start:d.loop.start,end:d.loop.end}; }
+  HM.deckId=d.t.id; hmRender(); hmPlace(); hmStatus(st); d.draw(); if(st.state==='running') hmPoll(); }
+function hmClose(){ $('harmPanel').style.display='none'; clearTimeout(HM.timer); HM.deck=null; }
+function hmStatus(st){ const el=$('hmStatus'), pr=$('hmProg'); pr.style.width=st.state==='running'?Math.round(100*(st.progress||0))+'%':'0';
+  el.style.color=st.state==='error'?'var(--red)':''; el.textContent=st.state==='running'?(st.message||'Working…'):st.state==='error'?st.message:st.state==='done'?'✓ Harmonies are in the Stems tab (mute, solo, volume, Mix tab and Premiere work as for any stem)':'Each voice follows the key note by note, keeps the singer’s tone, and becomes its own stem.'; }
+async function hmPoll(){ const d=HM.deck; if(!d) return; let st;
+  try{ st=await (await fetch('/api/music/harmony/'+d.t.id)).json(); }catch(e){ HM.timer=setTimeout(hmPoll,1000); return; }
+  hmStatus(st); $('hmMake').disabled=st.state==='running'||!d.hline||!HM.voices.length;
+  if(st.state==='running'){ HM.timer=setTimeout(hmPoll,700); return; }
+  if(st.state==='done'){ d.t.stem_names=st.stem_names; d.t.stem_labels=st.stem_labels; const tr=LIB.tracks.find(x=>x.id===d.t.id); if(tr){ tr.stem_names=st.stem_names; tr.stem_labels=st.stem_labels; }
+    await d.loadStems(st.stem_names); d.tab='stems'; d.renderPads(); if(typeof mixChanged==='function') mixChanged(); hmRender(); toast('Harmonies ready: they’re in the Stems tab'); } }
+$('hmClose').onclick=hmClose;
+$('hmUseLoop').onclick=()=>{ const d=HM.deck; if(d&&d.loop){ d.hline={start:d.loop.start,end:d.loop.end}; HM.voices.forEach(v=>{ if(v.timing==='answer') v.offset=hmAnswerOffset(d); }); hmRender(); d.draw(); } };
+$('hmStart').onclick=()=>{ const d=HM.deck; if(!d) return; const p=QUANT?d.snap(d.pos()):d.pos(); d.hline={start:p,end:d.hline&&d.hline.end>p+0.3?d.hline.end:Math.min(d.dur,p+4*60/(d.t.bpm||120))}; hmRender(); d.draw(); };
+$('hmEnd').onclick=()=>{ const d=HM.deck; if(!d) return; const p=QUANT?d.snap(d.pos()):d.pos(); const s0=d.hline?d.hline.start:Math.max(0,p-4*60/(d.t.bpm||120)); if(p>s0+0.3){ d.hline={start:s0,end:p}; HM.voices.forEach(v=>{ if(v.timing==='answer') v.offset=hmAnswerOffset(d); }); } else toast('The end has to come after the start'); hmRender(); d.draw(); };
+$('hmAudition').onclick=()=>{ const d=HM.deck; if(!d||!d.hline) return; const L=d.hline;
+  if(d.loop&&Math.abs(d.loop.start-L.start)<1e-3){ d.exitLoop(); } else {
+    const late=Math.max(0,...HM.voices.map(v=>v.offset||0))*60/(d.t.bpm||120), end=Math.min(d.dur,L.end+late);   // long enough to hear answering voices too
+    d.applyLoop({start:L.start,end,beats:hmBeats(d),i:Math.max(0,d.beatIndex(L.start))},d.pos()); d.seek(L.start); if(!d.playing) d.play(); }
+  hmRender(); };
+$('hmAdd').onclick=()=>{ if(HM.voices.length<4){ const used=HM.voices.map(v=>v.iv), next=['3up','5up','3down','unison','6down','8up'].find(x=>!used.includes(x))||'3up'; HM.voices.push({iv:next,timing:'with',offset:0,takes:2,pan:0,level_db:-6}); hmRender(); } };
+$('hmMake').onclick=async()=>{ const d=HM.deck; if(!d||!d.hline) return; const k=d.t;
+  const body={start:d.hline.start,end:d.hline.end,voices:HM.voices.map(v=>({...v,width:0.6})),humanize:+$('hmHuman').value,reverb:+$('hmVerb').value,tonic:k.tonic,mode:k.mode};
+  try{ const r=await api('/api/music/harmony/'+k.id,body); await r.json(); $('hmMake').disabled=true; hmPoll(); }catch(e){ toast(e.message); } };
+$('hmRemove').onclick=async()=>{ const d=HM.deck; if(!d) return; try{ const st=await (await fetch('/api/music/harmony/'+d.t.id,{method:'DELETE'})).json();
+  d.t.stem_names=st.stem_names; d.t.stem_labels={}; await d.loadStems(st.stem_names); d.renderPads(); if(typeof mixChanged==='function') mixChanged(); hmRender(); hmStatus({state:'idle'}); toast('Harmonies removed'); }catch(e){ toast(e.message); } };
+window.addEventListener('resize',()=>{ if(HM.deck) hmPlace(); });
+{ const f=Deck.prototype.unload; Deck.prototype.unload=function(keep){ if(HM.deck===this) hmClose(); this.hline=null; return f.call(this,keep); }; }
 
 // ---------- on-screen keyboard: check a key by ear
 let KB_LAST='';

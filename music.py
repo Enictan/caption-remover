@@ -681,3 +681,156 @@ def render_mix(stems: dict | None, mix_path: str, dst: str, gains: dict, semis: 
     sf.write(tmp, np.clip(a.T, -1, 1), SR, subtype="PCM_24")
     os.replace(tmp, dst)
     return dst
+
+
+# ================================================================ harmony maker
+# A key-aware backing-vocal generator: track the lead's melody, pick each harmony note from the song's scale
+# (a "third above" is 3 or 4 semitones depending on the note, like a real backing singer), shift the vocal
+# note by note with formant preservation (keeps the singer's tone), glide between notes, and stack slightly
+# different takes left/right with a little reverb so it sits behind the lead.
+HARMONY_INTERVALS = {          # id: (scale steps, label)
+    "unison": (0, "Double"), "3up": (2, "3rd above"), "4up": (3, "4th above"), "5up": (4, "5th above"),
+    "6up": (5, "6th above"), "8up": (7, "Octave above"), "3down": (-2, "3rd below"), "4down": (-3, "4th below"),
+    "5down": (-4, "5th below"), "6down": (-5, "6th below"), "8down": (-7, "Octave below"),
+}
+SCALES = {"major": [0, 2, 4, 5, 7, 9, 11], "minor": [0, 2, 3, 5, 7, 8, 10]}
+
+
+def harmony_dir(cache_root, path):
+    return os.path.join(cache_root, content_id(path), "harmony")
+
+
+def cached_harmony(cache_root, path):
+    """{stem name: flac}, {stem name: label}, settings - the harmonies made for this song before (if any)."""
+    import json
+    d = harmony_dir(cache_root, path)
+    try:
+        meta = json.load(open(os.path.join(d, "harmony.json"), encoding="utf-8"))
+    except Exception:
+        return {}, {}, None
+    files = {n: os.path.join(d, n + ".flac") for n in meta.get("labels", {})}
+    files = {n: p for n, p in files.items() if os.path.exists(p)}
+    return files, {n: meta["labels"][n] for n in files}, meta.get("settings")
+
+
+def _scale_notes(tonic, mode):
+    pcs = [(tonic + i) % 12 for i in SCALES["minor" if mode == "minor" else "major"]]
+    return np.array(sorted(m for m in range(0, 128) if m % 12 in pcs))
+
+
+def _melody(seg, sr):
+    """Lead vocal pitch (MIDI, NaN where unvoiced) per 256-sample hop at 22.05 kHz."""
+    import librosa
+    y = librosa.resample(seg.mean(0).astype(np.float32), orig_sr=sr, target_sr=AN_SR)
+    f0, voiced, prob = librosa.pyin(y, fmin=70, fmax=1100, sr=AN_SR, frame_length=2048, hop_length=256, fill_na=np.nan)
+    midi = 69 + 12 * np.log2(np.where(voiced & (prob > 0.25), f0, np.nan) / 440.0)
+    return midi, 256 / AN_SR
+
+
+def _shift_curve(midi, hop_s, notes, steps, n_samples, sr, glide=0.05):
+    """Semitone shift per output sample so each lead note lands on the scale note `steps` degrees away."""
+    from scipy.ndimage import median_filter, uniform_filter1d
+    T = len(midi)
+    deg = np.full(T, np.nan)
+    ok = ~np.isnan(midi)
+    if ok.any():
+        idx = np.searchsorted(notes, midi[ok])
+        idx = np.clip(idx, 1, len(notes) - 1)
+        lo, hi = notes[idx - 1], notes[idx]
+        near = np.where(np.abs(midi[ok] - lo) <= np.abs(midi[ok] - hi), idx - 1, idx)
+        deg[ok] = near
+    # steady the note choice: ignore vibrato / passing wobble shorter than ~100 ms
+    filled = deg.copy()
+    if np.isnan(filled).all():
+        filled[:] = len(notes) // 2
+    else:   # unvoiced frames keep the last note's shift (consonants follow their vowel)
+        last = np.nan
+        for i in range(T):
+            if np.isnan(filled[i]):
+                filled[i] = last
+            else:
+                last = filled[i]
+        first = filled[~np.isnan(filled)][0]
+        filled[np.isnan(filled)] = first
+    filled = median_filter(filled, size=9, mode="nearest").astype(int)
+    tgt = np.clip(filled + steps, 0, len(notes) - 1)
+    shift = (notes[tgt] - notes[filled]).astype(np.float64)
+    # to samples, then glide between notes like a singer would
+    t = np.minimum((np.arange(n_samples) / sr / hop_s).astype(int), T - 1)
+    curve = shift[t]
+    w = max(1, int(glide * sr))
+    return uniform_filter1d(curve, size=w, mode="nearest")
+
+
+def _drift(n, sr, amount, rng):
+    """Small slow pitch wander (semitones) + a touch of extra vibrato, different for every take."""
+    from scipy.ndimage import gaussian_filter1d
+    k = max(2, int(n / (sr * 0.25)) + 2)
+    walk = gaussian_filter1d(rng.normal(0, 1, k), 1.5)
+    walk = np.interp(np.linspace(0, k - 1, n), np.arange(k), walk / (np.abs(walk).max() + 1e-9))
+    t = np.arange(n) / sr
+    vib = np.sin(2 * np.pi * rng.uniform(4.6, 5.8) * t + rng.uniform(0, 6.28)) * np.clip((t - 0.25) * 2, 0, 1)
+    return amount * (0.09 * walk + 0.035 * vib)
+
+
+def harmonize(vocal_path, start, end, tonic, mode, voices, bpm, humanize=0.5, reverb=0.3, progress=None, seed=7):
+    """Returns [(label, stereo float32 array of the whole song)] - one per voice."""
+    from pedalboard import Pedalboard, HighpassFilter, HighShelfFilter, Reverb, time_stretch
+    progress = progress or (lambda f, m: None)
+    a = audio(vocal_path)
+    sr, N = SR, a.shape[1]
+    pad = int(0.25 * sr)
+    s0, s1 = max(0, int(start * sr) - pad), min(N, int(end * sr) + pad)
+    seg = a[:, s0:s1].astype(np.float32)
+    n = seg.shape[1]
+    fade = np.ones(n, np.float32)
+    f = min(int(0.12 * sr), n // 4)
+    fade[:f] = np.linspace(0, 1, f) ** 2
+    fade[-f:] = np.linspace(1, 0, f) ** 2
+    progress(0.05, "Following the melody…")
+    midi, hop_s = _melody(seg, sr)
+    notes = _scale_notes(tonic, mode)
+    beat = 60.0 / max(40.0, bpm or 120)
+    rng = np.random.default_rng(seed)
+    mono = seg.mean(0, keepdims=True)
+    out = []
+    total = sum(max(1, int(v.get("takes", 2))) for v in voices) or 1
+    done = 0
+    for vi, v in enumerate(voices):
+        steps, name = HARMONY_INTERVALS.get(v.get("iv", "3up"), HARMONY_INTERVALS["3up"])
+        base = _shift_curve(midi, hop_s, notes, steps, n, sr)
+        takes = max(1, min(3, int(v.get("takes", 2))))
+        width, pan = float(v.get("width", 0.6)), float(v.get("pan", 0.0))
+        pans = {1: [0.0], 2: [-1.0, 1.0], 3: [-1.0, 0.0, 1.0]}[takes]
+        mix = np.zeros((2, n + int(0.1 * sr)), np.float32)
+        for k in range(takes):
+            progress(0.1 + 0.85 * done / total, f"Singing {name.lower()} (take {k + 1} of {takes})…")
+            curve = base + _drift(n, sr, humanize, rng)
+            # lower voices a 3rd/4th down: let the tone darken with the pitch, like a lower singer (keeps the body);
+            # everything else keeps the lead's tone exactly
+            keep_tone = not (-3 <= steps < 0)
+            y = time_stretch(mono, sr, 1.0, pitch_shift_in_semitones=curve, high_quality=True,
+                             transient_mode="mixed", preserve_formants=keep_tone)[0][:n]
+            y = np.pad(y, (0, max(0, n - len(y))))[:n] * fade
+            lag = int(sr * humanize * rng.uniform(0.006, 0.028)) * (1 if k % 2 else -1 if k else 1)
+            p = np.clip(pan + pans[k] * width, -1, 1)
+            gl, gr = np.cos((p + 1) * np.pi / 4), np.sin((p + 1) * np.pi / 4)
+            o = max(0, int(0.05 * sr) + lag)
+            mix[0, o:o + n] += y * gl
+            mix[1, o:o + n] += y * gr
+            done += 1
+        mix /= np.sqrt(takes)
+        from pedalboard import LowShelfFilter
+        body = [LowShelfFilter(320, 5.0 if steps <= -7 else 3.5, 0.7)] if steps < -3 else []   # wide intervals below: give back some body
+        board = Pedalboard([HighpassFilter(110 if steps < 0 else 140)] + body + [HighShelfFilter(6500, -2.5, 0.7)] +
+                           ([Reverb(room_size=0.42, damping=0.55, wet_level=0.08 + 0.3 * reverb, dry_level=1.0, width=0.9)] if reverb > 0.01 else []))
+        mix = board(mix, sr)
+        mix *= 10 ** (float(v.get("level_db", -4.0)) / 20)
+        dest = s0 - int(0.05 * sr) + int(round(float(v.get("offset", 0)) * beat * sr))
+        full = np.zeros((2, N), np.float32)
+        a0, b0 = max(0, dest), min(N, dest + mix.shape[1])
+        if b0 > a0:
+            full[:, a0:b0] = mix[:, a0 - dest:b0 - dest]
+        out.append((name, full))
+    progress(0.98, "Saving…")
+    return out
